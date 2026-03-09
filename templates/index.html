@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>대학맛집 룰렛</title>
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+        body {
+            font-family: 'Pretendard', sans-serif;
+            text-align: center;
+            background-color: #f0f2f5;
+            padding: 20px;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .card {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 420px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            color: #333;
+            margin: 0 0 25px 0;
+            font-size: 1.8em;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+            position: relative;
+        }
+
+        select,
+        input[type="text"] {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: white;
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+        #autocomplete-list {
+            position: absolute;
+            top: 50px;
+            left: 0;
+            right: 0;
+            border: 1px solid #d4d4d4;
+            border-top: none;
+            z-index: 99;
+            background-color: #fff;
+            max-height: 200px;
+            overflow-y: auto;
+            text-align: left;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .autocomplete-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+
+        .autocomplete-item:hover,
+        .autocomplete-item.autocomplete-active {
+            background-color: #f9f9f9;
+        }
+
+        .yellow-btn {
+            padding: 12px 18px;
+            margin-top: 10px;
+            background-color: #fee500 !important;
+            border: none !important;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #333;
+            white-space: nowrap;
+        }
+
+        #roulette-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 20px 0;
+            display: none;
+            justify-content: center;
+        }
+
+        #canvas {
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            border: 5px solid #fff;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+
+        #pointer {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 40px;
+            z-index: 10;
+        }
+
+        #spin-btn {
+            background-color: #ff5c5c;
+            color: white;
+            display: none;
+            width: 100%;
+            font-size: 1.1em;
+            margin: 20px 0;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #result-text {
+            width: 100%;
+            min-height: 120px;
+            margin-top: 10px;
+        }
+
+        .result-card {
+            background: #fff;
+            border: 2px solid #fee500;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* PWA 스플래시 화면 등에서 배경색을 자연스럽게 덮기 위해 body 설정 재확인 */
+        html,
+        body {
+            background-color: #f0f2f5;
+        }
+    </style>
+    <!-- PWA Settings -->
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#fee500">
+    <link rel="apple-touch-icon" href="/static/img/icon-192.png">
+
+    <!-- iOS 전용 웹앱 모드 활성화 (주소창 숨기기 및 네이티브 앱 느낌 부여) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="대학맛집 룰렛">
+
+    <!-- 화면 노치/안전영역 대응 (최신 기기 풀스크린 대응) -->
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+</head>
+
+<body>
+    <div class="card">
+        <h1>🎡 대학맛집 룰렛</h1>
+        <div class="search-box">
+            <input type="text" id="univ-input" placeholder="대학교 이름을 입력하세요 (예: 고려대)" autocomplete="off">
+            <div id="autocomplete-list"></div>
+
+            <div style="position: relative;">
+                <input type="text" id="budget-input-display" placeholder="예산을 선택하세요" readonly style="cursor: pointer;">
+                <input type="hidden" id="budget-input" value="1">
+                <div id="budget-autocomplete-list" class="autocomplete-list"
+                    style="display: none; top: 50px; left: 0; right: 0; border: 1px solid #d4d4d4; border-top: none; z-index: 99; background-color: #fff; text-align: left; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: absolute;">
+                    <div class="autocomplete-item budget-item" data-value="1">가성비 식사 (1만원 이하) 🍙</div>
+                    <div class="autocomplete-item budget-item" data-value="2">적당한 식사 (1만원대) 🍛</div>
+                    <div class="autocomplete-item budget-item" data-value="3">특별한 한 끼 (2만원 이상) 💸</div>
+                </div>
+            </div>
+
+            <button class="yellow-btn" onclick="getRestaurants()">룰렛 등재 식당 불러오기</button>
+        </div>
+        <div id="roulette-container">
+            <div id="pointer">▼</div>
+            <canvas id="canvas"></canvas>
+        </div>
+        <button id="spin-btn" onclick="spinWheel()">룰렛 돌리기!!</button>
+        <div id="result-text"></div>
+    </div>
+
+    <script>
+        const KOREAN_UNIVS = [
+            "가천대학교 (글로벌)", "가천대학교 (메디컬)", "가톨릭대학교 (성심)", "가톨릭대학교 (성의)", "가톨릭대학교 (성신)",
+            "강원대학교 (춘천)", "강원대학교 (삼척)", "건국대학교 (서울)", "건국대학교 (글로컬)", "경기대학교 (수원)", "경기대학교 (서울)",
+            "경북대학교 (대구)", "경북대학교 (상주)", "경상국립대학교", "경희대학교 (서울)", "경희대학교 (국제)",
+            "계명대학교 (성서)", "계명대학교 (대명)", "고려대학교 (서울)", "고려대학교 (세종)", "광운대학교",
+            "국민대학교", "단국대학교 (죽전)", "단국대학교 (천안)", "대구가톨릭대학교", "대구대학교",
+            "동국대학교 (서울)", "동국대학교 (WISE)", "동아대학교 (승학)", "동아대학교 (부민)", "동아대학교 (구덕)",
+            "명지대학교 (인문)", "명지대학교 (자연)", "부경대학교 (대연)", "부경대학교 (용당)", "부산대학교 (부산)", "부산대학교 (밀양)", "부산대학교 (양산)",
+            "서강대학교", "서울과학기술대학교", "서울대학교 (관악)", "서울대학교 (연건)", "서울시립대학교",
+            "성균관대학교 (인문사회과학)", "성균관대학교 (자연과학)", "성신여자대학교 (돈암)", "성신여자대학교 (미아)",
+            "세종대학교", "숙명여자대학교", "숭실대학교", "아주대학교",
+            "연세대학교 (신촌)", "연세대학교 (미래)", "연세대학교 (국제)", "영남대학교", "원광대학교",
+            "이화여자대학교", "인천대학교", "인하대학교",
+            "전남대학교 (광주)", "전남대학교 (여수)", "전북대학교 (전주)", "전북대학교 (특성화)", "제주대학교",
+            "조선대학교", "중앙대학교 (서울)", "중앙대학교 (다빈치)",
+            "충남대학교 (대덕)", "충남대학교 (보운)", "충북대학교 (개신)", "충북대학교 (오송)",
+            "한국공학대학교", "한국외국어대학교 (서울)", "한국외국어대학교 (글로벌)", "한국항공대학교",
+            "한남대학교", "한림대학교", "한양대학교 (서울)", "한양대학교 (ERICA)", "홍익대학교 (서울)", "홍익대학교 (세종)",
+            "카이스트 (KAIST)", "포스텍 (POSTECH)", "유니스 (UNIST)", "지스트 (GIST)", "디지스트 (DGIST)"
+        ];
+
+
+        const univInput = document.getElementById("univ-input");
+        const autocompleteList = document.getElementById("autocomplete-list");
+        let currentFocus = -1; // -1 means no selection
+
+        univInput.addEventListener("input", function () {
+            const val = this.value.trim().toLowerCase();
+            autocompleteList.innerHTML = '';
+            currentFocus = -1;
+
+            if (!val) {
+                autocompleteList.style.display = 'none';
+                return;
+            }
+
+            const matches = KOREAN_UNIVS.filter(univ => univ.toLowerCase().includes(val));
+
+            if (matches.length > 0) {
+                autocompleteList.style.display = 'block';
+                matches.forEach((match, i) => {
+                    const div = document.createElement("div");
+                    div.className = "autocomplete-item";
+
+                    // Highlight the first matching item automatically
+                    if (i === 0) {
+                        div.className += " autocomplete-active";
+                        currentFocus = 0;
+                    }
+
+                    // Highlight matching part
+                    const index = match.toLowerCase().indexOf(val);
+                    const before = match.substring(0, index);
+                    const middle = match.substring(index, index + val.length);
+                    const after = match.substring(index + val.length);
+
+                    div.innerHTML = `${before}<strong>${middle}</strong>${after}`;
+                    div.addEventListener("click", function (e) {
+                        e.stopPropagation();
+                        univInput.value = match;
+                        autocompleteList.style.display = 'none';
+                        // Move focus to budget input automatically (delayed to avoid global click listener collision)
+                        setTimeout(openBudgetDropdown, 10);
+                    });
+                    autocompleteList.appendChild(div);
+                });
+            } else {
+                autocompleteList.style.display = 'none';
+            }
+        });
+
+        /* Keyboard Navigation Support */
+        univInput.addEventListener("keydown", function (e) {
+            let items = autocompleteList.getElementsByTagName("div");
+            if (e.key === "ArrowDown") {
+                currentFocus++;
+                addActive(items);
+            } else if (e.key === "ArrowUp") {
+                currentFocus--;
+                addActive(items);
+            } else if (e.key === "Enter") {
+                e.preventDefault();
+                if (currentFocus > -1 && items.length > 0) {
+                    // Click the active item
+                    items[currentFocus].click();
+                } else {
+                    // Start search if enter is pressed but list is closed
+                    getRestaurants();
+                }
+            }
+        });
+
+        function addActive(items) {
+            if (!items || items.length === 0) return false;
+            removeActive(items);
+            if (currentFocus >= items.length) currentFocus = 0;
+            if (currentFocus < 0) currentFocus = (items.length - 1);
+            items[currentFocus].classList.add("autocomplete-active");
+            // Auto scroll to active item
+            items[currentFocus].scrollIntoView({ block: "nearest" });
+        }
+
+        function removeActive(items) {
+            for (let i = 0; i < items.length; i++) {
+                items[i].classList.remove("autocomplete-active");
+            }
+        }
+
+        /* Budget Dropdown Logic */
+        const budgetInputDisplay = document.getElementById("budget-input-display");
+        const budgetInput = document.getElementById("budget-input");
+        const budgetAutocompleteList = document.getElementById("budget-autocomplete-list");
+        let budgetFocus = -1;
+
+        function openBudgetDropdown() {
+            budgetAutocompleteList.style.display = 'block';
+            budgetInputDisplay.focus();
+            let items = budgetAutocompleteList.getElementsByTagName("div");
+
+            // Set default highlighted to the first one if empty, or current selection
+            let found = -1;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].getAttribute('data-value') === budgetInput.value) {
+                    found = i; break;
+                }
+            }
+            budgetFocus = found > -1 ? found : 0;
+            addActiveBudget(items);
+        }
+
+        budgetInputDisplay.addEventListener("click", function (e) {
+            e.stopPropagation();
+            openBudgetDropdown();
+        });
+
+        budgetInputDisplay.addEventListener("keydown", function (e) {
+            let items = budgetAutocompleteList.getElementsByTagName("div");
+            if (budgetAutocompleteList.style.display === 'block') {
+                if (e.key === "ArrowDown") {
+                    budgetFocus++;
+                    addActiveBudget(items);
+                } else if (e.key === "ArrowUp") {
+                    budgetFocus--;
+                    addActiveBudget(items);
+                } else if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (budgetFocus > -1 && items.length > 0) {
+                        items[budgetFocus].click();
+                    }
+                }
+            } else if (e.key === "Enter" || e.key === "ArrowDown") {
+                openBudgetDropdown();
+            }
+        });
+
+        function addActiveBudget(items) {
+            if (!items || items.length === 0) return false;
+            removeActive(items);
+            if (budgetFocus >= items.length) budgetFocus = 0;
+            if (budgetFocus < 0) budgetFocus = (items.length - 1);
+            items[budgetFocus].classList.add("autocomplete-active");
+            // Auto scroll to active item
+            items[budgetFocus].scrollIntoView({ block: "nearest" });
+        }
+
+        // Attach clicks to budget items
+        const budgetItems = budgetAutocompleteList.getElementsByTagName("div");
+        for (let i = 0; i < budgetItems.length; i++) {
+            budgetItems[i].addEventListener("click", function (e) {
+                e.stopPropagation();
+                budgetInputDisplay.value = this.innerText;
+                budgetInput.value = this.getAttribute("data-value");
+                budgetAutocompleteList.style.display = 'none';
+
+                // Focus the load button automatically so the user can just press Enter
+                document.querySelector('.yellow-btn').focus();
+            });
+        }
+
+        // Initialize default budget display
+        budgetInputDisplay.value = budgetItems[0].innerText;
+
+        // Close autocomplete when clicking outside
+        document.addEventListener("click", function (e) {
+            if (e.target !== univInput && e.target.parentNode !== autocompleteList) {
+                autocompleteList.style.display = 'none';
+            }
+            if (e.target !== budgetInputDisplay && e.target.parentNode !== budgetAutocompleteList) {
+                budgetAutocompleteList.style.display = 'none';
+            }
+        });
+
+        let restaurants = [];
+        let currentRotation = 0;
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = 300 * dpr; canvas.height = 300 * dpr; ctx.scale(dpr, dpr);
+
+        async function getRestaurants() {
+            let univ = document.getElementById('univ-input').value.trim();
+
+            if (!univ) return alert("대학교 이름을 입력해주세요.");
+
+            // Strict Validation: Must be from the predefined list
+            if (!KOREAN_UNIVS.includes(univ)) {
+                return alert("목록에서 대학(캠퍼스)을 정확히 선택해주세요. (예: 고려대학교 (서울))");
+            }
+            const targetPriceLevel = document.getElementById('budget-input').value;
+
+            const loadBtn = document.querySelector('.yellow-btn');
+            loadBtn.innerText = "찾는 중...";
+
+            try {
+                const response = await fetch(`/search?univ=${encodeURIComponent(univ)}&target_price_level=${targetPriceLevel}`);
+                const data = await response.json();
+
+                if (data.length > 0) {
+                    // Shuffle the entire list and pick up to 6 for the roulette
+                    const shuffled = data.sort(() => 0.5 - Math.random());
+                    restaurants = shuffled.slice(0, 6);
+
+                    document.getElementById('result-text').innerHTML = "";
+                    document.getElementById('roulette-container').style.display = 'block';
+                    document.getElementById('spin-btn').style.display = 'block';
+
+                    // Update wording based on whether we had to subset the data
+                    if (data.length <= 6) {
+                        document.getElementById('spin-btn').innerText = `룰렛 돌리기!! (${data.length}개 식당)`;
+                    } else {
+                        document.getElementById('spin-btn').innerText = `룰렛 돌리기!! (${data.length}개 식당 중 6개 랜덤 선발됨)`;
+                    }
+
+                    currentRotation = 0; canvas.style.transition = "none"; canvas.style.transform = "rotate(0deg)";
+                    drawRoulette();
+                } else {
+                    alert("해당 조건에 맞는 식당 검색 결과가 없습니다.");
+                }
+            } catch (error) {
+                alert("데이터를 가져오는 중 오류가 발생했습니다.");
+            } finally {
+                loadBtn.innerText = "룰렛 식당 조합 다시 불러오기";
+            }
+        }
+
+        function drawRoulette() {
+            // Appetizing Vivid Food Palette
+            const colors = ["#FF6B6B", "#FFD166", "#06D6A0", "#118AB2", "#EF476F", "#F78C6B"];
+            const arc = (2 * Math.PI) / restaurants.length;
+            ctx.clearRect(0, 0, 300, 300);
+            restaurants.forEach((rest, i) => {
+                const angle = i * arc;
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.beginPath(); ctx.moveTo(150, 150); ctx.arc(150, 150, 150, angle, angle + arc); ctx.fill();
+                ctx.save(); ctx.fillStyle = "white"; ctx.translate(150, 150); ctx.rotate(angle + arc / 2); ctx.textAlign = "right";
+                let name = rest.place_name;
+                if (name.length > 8) name = name.substring(0, 7) + "...";
+                ctx.font = "bold 15px 'Pretendard', sans-serif";
+                ctx.fillText(name, 135, 5); ctx.restore();
+            });
+        }
+
+        function spinWheel() {
+            if (restaurants.length === 0) return;
+            document.getElementById('spin-btn').style.display = 'none';
+
+            const newSpin = Math.floor(Math.random() * 360) + 1440;
+            currentRotation += newSpin;
+            canvas.style.transition = "transform 3s ease-out";
+            canvas.style.transform = `rotate(${currentRotation}deg)`;
+
+            document.getElementById('result-text').innerHTML = `
+            <p style="font-size:1.5em; color:#ff5c5c; font-weight:bold; animation: blink 1s infinite;">
+                🥁 두구두구두구...
+            </p>
+        `;
+
+            setTimeout(() => {
+                const actualRotation = currentRotation % 360;
+                const sliceAngle = 360 / restaurants.length;
+                const prizeIndex = Math.floor(((360 - actualRotation + 270) % 360) / sliceAngle);
+                const winner = restaurants[prizeIndex];
+
+                let estimatedPriceText = "";
+                if (winner.price_level === 1) estimatedPriceText = "만원 이하 (저렴한 한 끼)";
+                else if (winner.price_level === 2) estimatedPriceText = "이만원 이하 (든든한 식사)";
+                else estimatedPriceText = "가격 제약 없음 (고급스러운 식사)";
+
+                let reportOptionsHTML = "";
+                const priceOptions = [
+                    { val: 1, label: "가성비 식사 (1만원 이하) 🍙" },
+                    { val: 2, label: "적당한 식사 (1만원대) 🍛" },
+                    { val: 3, label: "특별한 한 끼 (2만원 이상) 💸" }
+                ];
+
+                priceOptions.forEach(opt => {
+                    if (opt.val !== winner.price_level) {
+                        // Use inline style for hover effect via onmouseover/onmouseout for simplicity
+                        reportOptionsHTML += `<div style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'" onclick="reportPrice('${winner.place_name.replace(/'/g, "\\'")}', ${opt.val})">${opt.label}</div>`;
+                    }
+                });
+
+                document.getElementById('result-text').innerHTML = `
+                <div class="result-card">
+                    <p style="font-size:0.8em; color:#888; margin:0;">오늘의 추천 맛집</p>
+                    <h2 style="margin:8px 0; color:#333; font-size:1.6em;">${winner.place_name}</h2>
+                    <p style="font-size:0.9em; color:#666; margin-bottom:5px;">${winner.category_name.split('>').pop()}</p>
+                    <p style="font-size:0.85em; color:#0056b3; font-weight:bold; margin-bottom:15px;">예상: ${estimatedPriceText}</p>
+                    <a href="${winner.place_url}" target="_blank" style="display:block; background:#fee500; color:#333; text-decoration:none; padding:12px; border-radius:8px; font-weight:bold; margin-bottom:10px;">📍 위치 보기 (카카오맵)</a>
+                    
+                    <div style="position: relative; width: 100%;">
+                        <button onclick="toggleReportMenu('${winner.place_name.replace(/'/g, "\\'")}')" style="width:100%; padding:10px; border:1px solid #ddd; background:#fff; border-radius:8px; cursor:pointer; color:#777; font-size:0.8em; text-align: left;">🤔 예상 가격대가 틀렸나요? 수정 제안하기 ▼</button>
+                        <div id="report-menu-${winner.place_name.replace(/'/g, "\\'")}" style="display:none; position: absolute; bottom: 100%; left: 0; right: 0; background: #fff; border: 1px solid #d4d4d4; border-bottom: none; border-radius: 8px 8px 0 0; box-shadow: 0 -4px 6px rgba(0,0,0,0.1); text-align: left; z-index: 100; margin-bottom: 2px;">
+                            ${reportOptionsHTML}
+                        </div>
+                    </div>
+                </div>
+            `;
+                document.getElementById('spin-btn').style.display = 'block';
+                document.getElementById('spin-btn').innerText = '룰렛 다시 돌리기!!';
+            }, 3000);
+        }
+
+        function toggleReportMenu(name) {
+            const menu = document.getElementById(`report-menu-${name}`);
+            if (menu.style.display === 'none' || menu.style.display === '') {
+                menu.style.display = 'block';
+            } else {
+                menu.style.display = 'none';
+            }
+        }
+
+        async function reportPrice(restaurantName, level) {
+            try {
+                const response = await fetch('/report_price', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        restaurant_name: restaurantName,
+                        suggested_price_level: level
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert("소중한 의견 감사합니다! 데이터베이스에 반영되었습니다.");
+                    document.getElementById(`report-menu-${restaurantName}`).style.display = 'none';
+                } else {
+                    alert("오류: " + result.message);
+                }
+            } catch (error) {
+                alert("서버와 통신하는 중 오류가 발생했습니다.");
+            }
+        }
+
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+</body>
+
+</html>

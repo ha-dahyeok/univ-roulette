@@ -1,0 +1,21 @@
+{
+    "name": "대학맛집 룰렛",
+    "short_name": "대학맛집",
+    "description": "우리 학교 주변 가성비 맛집을 룰렛으로 결정해보세요!",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#fee500",
+    "icons": [
+        {
+            "src": "/static/img/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/static/img/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
