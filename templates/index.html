@@ -170,7 +170,7 @@
         }
     </style>
     <!-- PWA Settings -->
-    <link rel="manifest" href="/static/manifest.json">
+    <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#fee500">
     <link rel="apple-touch-icon" href="/static/img/icon-192.png">
 
@@ -184,7 +184,6 @@
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 </head>
 
-<body>
     <div class="card">
         <h1>🎡 대학맛집 룰렛</h1>
         <div class="search-box">
@@ -202,7 +201,7 @@
                 </div>
             </div>
 
-            <button class="yellow-btn" onclick="getRestaurants()">룰렛 등재 식당 불러오기</button>
+            <button type="button" class="yellow-btn" onclick="getRestaurants()">룰렛 등재 식당 불러오기</button>
         </div>
         <div id="roulette-container">
             <div id="pointer">▼</div>
@@ -213,6 +212,14 @@
     </div>
 
     <script>
+        function escapeHTML(str) {
+            if (!str) return "";
+            return str.replace(/[&<>'"]/g, function(tag) {
+                const charsToReplace = { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' };
+                return charsToReplace[tag] || tag;
+            });
+        }
+
         const KOREAN_UNIVS = [
             "가천대학교 (글로벌)", "가천대학교 (메디컬)", "가톨릭대학교 (성심)", "가톨릭대학교 (성의)", "가톨릭대학교 (성신)",
             "강원대학교 (춘천)", "강원대학교 (삼척)", "건국대학교 (서울)", "건국대학교 (글로컬)", "경기대학교 (수원)", "경기대학교 (서울)",
@@ -501,6 +508,11 @@
                 else if (winner.price_level === 2) estimatedPriceText = "이만원 이하 (든든한 식사)";
                 else estimatedPriceText = "가격 제약 없음 (고급스러운 식사)";
 
+                const safeName = escapeHTML(winner.place_name);
+                const safeNameEscapedJs = safeName.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                const safeCategory = escapeHTML(winner.category_name.split('>').pop());
+                const safeUrl = encodeURI(winner.place_url);
+
                 let reportOptionsHTML = "";
                 const priceOptions = [
                     { val: 1, label: "가성비 식사 (1만원 이하) 🍙" },
@@ -511,21 +523,21 @@
                 priceOptions.forEach(opt => {
                     if (opt.val !== winner.price_level) {
                         // Use inline style for hover effect via onmouseover/onmouseout for simplicity
-                        reportOptionsHTML += `<div style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'" onclick="reportPrice('${winner.place_name.replace(/'/g, "\\'")}', ${opt.val})">${opt.label}</div>`;
+                        reportOptionsHTML += `<div style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'" onclick="reportPrice('${safeNameEscapedJs}', ${opt.val})">${opt.label}</div>`;
                     }
                 });
 
                 document.getElementById('result-text').innerHTML = `
                 <div class="result-card">
                     <p style="font-size:0.8em; color:#888; margin:0;">오늘의 추천 맛집</p>
-                    <h2 style="margin:8px 0; color:#333; font-size:1.6em;">${winner.place_name}</h2>
-                    <p style="font-size:0.9em; color:#666; margin-bottom:5px;">${winner.category_name.split('>').pop()}</p>
+                    <h2 style="margin:8px 0; color:#333; font-size:1.6em;">${safeName}</h2>
+                    <p style="font-size:0.9em; color:#666; margin-bottom:5px;">${safeCategory}</p>
                     <p style="font-size:0.85em; color:#0056b3; font-weight:bold; margin-bottom:15px;">예상: ${estimatedPriceText}</p>
-                    <a href="${winner.place_url}" target="_blank" style="display:block; background:#fee500; color:#333; text-decoration:none; padding:12px; border-radius:8px; font-weight:bold; margin-bottom:10px;">📍 위치 보기 (카카오맵)</a>
+                    <a href="${safeUrl}" target="_blank" style="display:block; background:#fee500; color:#333; text-decoration:none; padding:12px; border-radius:8px; font-weight:bold; margin-bottom:10px;">📍 위치 보기 (카카오맵)</a>
                     
                     <div style="position: relative; width: 100%;">
-                        <button onclick="toggleReportMenu('${winner.place_name.replace(/'/g, "\\'")}')" style="width:100%; padding:10px; border:1px solid #ddd; background:#fff; border-radius:8px; cursor:pointer; color:#777; font-size:0.8em; text-align: left;">🤔 예상 가격대가 틀렸나요? 수정 제안하기 ▼</button>
-                        <div id="report-menu-${winner.place_name.replace(/'/g, "\\'")}" style="display:none; position: absolute; bottom: 100%; left: 0; right: 0; background: #fff; border: 1px solid #d4d4d4; border-bottom: none; border-radius: 8px 8px 0 0; box-shadow: 0 -4px 6px rgba(0,0,0,0.1); text-align: left; z-index: 100; margin-bottom: 2px;">
+                        <button onclick="toggleReportMenu('${safeNameEscapedJs}')" style="width:100%; padding:10px; border:1px solid #ddd; background:#fff; border-radius:8px; cursor:pointer; color:#777; font-size:0.8em; text-align: left;">🤔 예상 가격대가 틀렸나요? 수정 제안하기 ▼</button>
+                        <div id="report-menu-${safeNameEscapedJs}" style="display:none; position: absolute; bottom: 100%; left: 0; right: 0; background: #fff; border: 1px solid #d4d4d4; border-bottom: none; border-radius: 8px 8px 0 0; box-shadow: 0 -4px 6px rgba(0,0,0,0.1); text-align: left; z-index: 100; margin-bottom: 2px;">
                             ${reportOptionsHTML}
                         </div>
                     </div>
@@ -573,7 +585,7 @@
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/static/sw.js')
+                navigator.serviceWorker.register('/sw.js')
                     .then(registration => {
                         console.log('ServiceWorker registration successful with scope: ', registration.scope);
                     })

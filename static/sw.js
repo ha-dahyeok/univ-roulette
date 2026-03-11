@@ -1,7 +1,7 @@
 const CACHE_NAME = 'univ-roulette-v1';
 const urlsToCache = [
     '/',
-    '/static/manifest.json',
+    '/manifest.json',
     '/static/img/icon-192.png',
     '/static/img/icon-512.png',
     'https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css'
