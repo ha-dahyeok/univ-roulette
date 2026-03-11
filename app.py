@@ -22,16 +22,28 @@ load_db()
 
 # 보안 2: 간단한 IP 기반 Rate Limiting (봇 공격 방어)
 request_history = defaultdict(list)
-MAX_REQUESTS_PER_MINUTE = 5
+MAX_REQUESTS_PER_MINUTE = 20  # 제보 요청 한도 (엄격)
+SEARCH_MAX_REQUESTS_PER_MINUTE = 100  # 검색 요청 한도 (여유)
 
-def is_rate_limited(ip):
+def is_rate_limited(ip, limit_type='report'):
     now = time.time()
     # 1분(60초) 지난 기록 지우기
-    request_history[ip] = [t for t in request_history[ip] if now - t < 60]
-    if len(request_history[ip]) >= MAX_REQUESTS_PER_MINUTE:
+    # 요청 타입에 따라 각각 다른 한도 적용을 위해 키를 분리
+    cache_key = f"{ip}_{limit_type}"
+    request_history[cache_key] = [t for t in request_history[cache_key] if now - t < 60]
+    
+    limit = SEARCH_MAX_REQUESTS_PER_MINUTE if limit_type == 'search' else MAX_REQUESTS_PER_MINUTE
+    if len(request_history[cache_key]) >= limit:
         return True
-    request_history[ip].append(now)
+    request_history[cache_key].append(now)
     return False
+
+@app.after_request
+def apply_security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
 
 @app.route('/')
 def index():
@@ -47,6 +59,13 @@ def serve_manifest():
 
 @app.route('/search')
 def search():
+    client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+    if client_ip:
+        client_ip = client_ip.split(',')[0].strip()
+    
+    if is_rate_limited(client_ip, limit_type='search'):
+        return jsonify({'error': '너무 많은 검색 요청이 발생했습니다. 1분 후에 다시 시도해주세요.'}), 429
+        
     univ = request.args.get('univ')
     try:
         target_price_level = int(request.args.get('target_price_level', 0))
@@ -74,7 +93,8 @@ def report_price():
     client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
     if client_ip:
         client_ip = client_ip.split(',')[0].strip()
-    if is_rate_limited(client_ip):
+        
+    if is_rate_limited(client_ip, limit_type='report'):
         return jsonify({'success': False, 'message': '너무 많은 요청이 발생했습니다. 1분 후에 다시 시도해주세요.'}), 429
 
     data = request.json
