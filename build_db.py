@@ -4,8 +4,12 @@ import time
 import os
 import math
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dotenv import load_dotenv
 
-KAKAO_API_KEY = "e5ba2b9169d648e73a93e941931bae93"
+load_dotenv()
+KAKAO_API_KEY = os.getenv("KAKAO_API_KEY")
+if not KAKAO_API_KEY:
+    print("⚠️ KAKAO_API_KEY 가 .env 파일에 설정되지 않았습니다.")
 
 def haversine(lon1, lat1, lon2, lat2):
     lon1, lat1, lon2, lat2 = map(math.radians, [lon1, lat1, lon2, lat2])

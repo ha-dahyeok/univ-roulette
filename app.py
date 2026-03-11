@@ -70,8 +70,10 @@ def search():
 
 @app.route('/report_price', methods=['POST'])
 def report_price():
-    # 봇(Bot) 무차별 제보 방어
-    client_ip = request.remote_addr
+    # 봇(Bot) 무차별 제보 방어: 프록시 환경의 X-Forwarded-For 헤더 지원
+    client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+    if client_ip:
+        client_ip = client_ip.split(',')[0].strip()
     if is_rate_limited(client_ip):
         return jsonify({'success': False, 'message': '너무 많은 요청이 발생했습니다. 1분 후에 다시 시도해주세요.'}), 429
 
