@@ -737,7 +737,7 @@
             const userAgent = window.navigator.userAgent.toLowerCase();
             return /iphone|ipad|ipod/.test(userAgent);
         };
-        const isInStandaloneMode = () => ('standalone' in window.navigator) || (window.matchMedia('(display-mode: standalone)').matches);
+        const isInStandaloneMode = () => (window.navigator.standalone === true) || (window.matchMedia('(display-mode: standalone)').matches);
 
         // Function to show the button with specific logic
         function showInstallButton() {
