@@ -636,37 +636,46 @@
         const installContainer = document.getElementById('install-container');
         const installButton = document.getElementById('install-button');
 
+        // Check for specific browsers
+        const isWhale = () => /whale/i.test(window.navigator.userAgent);
+        const isChrome = () => /chrome|chromium|crios/i.test(window.navigator.userAgent) && !/edg|whale|opr/i.test(window.navigator.userAgent);
+
         window.addEventListener('beforeinstallprompt', (e) => {
-            // Prevent Chrome 67 and earlier from automatically showing the prompt
             e.preventDefault();
-            // Stash the event so it can be triggered later.
             deferredPrompt = e;
-            // Update UI notify the user they can add to home screen
             installContainer.style.display = 'block';
 
             installButton.addEventListener('click', (e) => {
-                // hide our install promotion
-                installContainer.style.display = 'none';
-                // Show the prompt
-                deferredPrompt.prompt();
-                // Wait for the user to respond to the prompt
-                deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        console.log('User accepted the install prompt');
-                    } else {
-                        console.log('User dismissed the install prompt');
-                    }
-                    deferredPrompt = null;
-                });
+                if (deferredPrompt) {
+                    installContainer.style.display = 'none';
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then((choiceResult) => {
+                        deferredPrompt = null;
+                    });
+                }
             });
         });
+
+        // Fallback: If event hasn't fired but it's a PWA-capable browser (Chrome/Whale), show button as a guide
+        setTimeout(() => {
+            if (!isInStandaloneMode() && !deferredPrompt && (isWhale() || isChrome())) {
+                installContainer.style.display = 'block';
+                installButton.addEventListener('click', () => {
+                    if (isWhale()) {
+                        alert("🐳 네이버 웨일 설치 방법:\n\n1. 주소창 오른쪽에 있는 [앱 실행/설치(📥)] 아이콘을 누르거나,\n2. 우측 상단 메뉴(⋮) -> [대학맛집 룰렛 설치]를 클릭해 주세요!");
+                    } else {
+                        alert("🌐 브라우저 설치 방법:\n\n1. 주소창 오른쪽의 [설치(📥)] 아이콘을 누르거나,\n2. 우측 상단 메뉴(⋮) -> [대학맛집 룰렛 설치]를 클릭해 주세요!");
+                    }
+                });
+            }
+        }, 3000);
 
         // Detect iOS to show manual instruction
         const isIos = () => {
             const userAgent = window.navigator.userAgent.toLowerCase();
             return /iphone|ipad|ipod/.test(userAgent);
         };
-        const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
+        const isInStandaloneMode = () => ('standalone' in window.navigator) || (window.matchMedia('(display-mode: standalone)').matches);
 
         if (isIos() && !isInStandaloneMode()) {
             installContainer.style.display = 'block';
@@ -678,7 +687,6 @@
 
         window.addEventListener('appinstalled', (evt) => {
             installContainer.style.display = 'none';
-            console.log('App was installed');
         });
 
         // PWA Service Worker Registration
