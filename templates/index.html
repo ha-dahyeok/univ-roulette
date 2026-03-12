@@ -639,51 +639,45 @@
         // Check for specific browsers
         const isWhale = () => /whale/i.test(window.navigator.userAgent);
         const isChrome = () => /chrome|chromium|crios/i.test(window.navigator.userAgent) && !/edg|whale|opr/i.test(window.navigator.userAgent);
-
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installContainer.style.display = 'block';
-
-            installButton.addEventListener('click', (e) => {
-                if (deferredPrompt) {
-                    installContainer.style.display = 'none';
-                    deferredPrompt.prompt();
-                    deferredPrompt.userChoice.then((choiceResult) => {
-                        deferredPrompt = null;
-                    });
-                }
-            });
-        });
-
-        // Fallback: If event hasn't fired but it's a PWA-capable browser (Chrome/Whale), show button as a guide
-        setTimeout(() => {
-            if (!isInStandaloneMode() && !deferredPrompt && (isWhale() || isChrome())) {
-                installContainer.style.display = 'block';
-                installButton.addEventListener('click', () => {
-                    if (isWhale()) {
-                        alert("🐳 네이버 웨일 설치 방법:\n\n1. 주소창 오른쪽에 있는 [앱 실행/설치(📥)] 아이콘을 누르거나,\n2. 우측 상단 메뉴(⋮) -> [대학맛집 룰렛 설치]를 클릭해 주세요!");
-                    } else {
-                        alert("🌐 브라우저 설치 방법:\n\n1. 주소창 오른쪽의 [설치(📥)] 아이콘을 누르거나,\n2. 우측 상단 메뉴(⋮) -> [대학맛집 룰렛 설치]를 클릭해 주세요!");
-                    }
-                });
-            }
-        }, 3000);
-
-        // Detect iOS to show manual instruction
         const isIos = () => {
             const userAgent = window.navigator.userAgent.toLowerCase();
             return /iphone|ipad|ipod/.test(userAgent);
         };
         const isInStandaloneMode = () => ('standalone' in window.navigator) || (window.matchMedia('(display-mode: standalone)').matches);
 
-        if (isIos() && !isInStandaloneMode()) {
+        // Function to show the button with specific logic
+        function showInstallButton() {
+            if (isInStandaloneMode()) return; // Already installed, don't show
+
             installContainer.style.display = 'block';
-            installButton.innerText = '설치 방법 보기';
-            installButton.addEventListener('click', () => {
-                alert("🍎 아이폰(iOS) 설치 방법:\n\n1. 하단 [공유(↑)] 버튼을 누릅니다.\n2. [홈 화면에 추가] 메뉴를 선택합니다.\n3. 우측 상단 [추가]를 누르면 끝!");
+
+            // Reset listeners to avoid duplicates
+            const newButton = installButton.cloneNode(true);
+            installButton.parentNode.replaceChild(newButton, installButton);
+            
+            newButton.addEventListener('click', () => {
+                if (deferredPrompt) {
+                    newButton.parentElement.parentElement.style.display = 'none';
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+                } else if (isIos()) {
+                    alert("🍎 아이폰(iOS) 설치 방법:\n\n1. 하단 [공유(↑)] 버튼을 누릅니다.\n2. [홈 화면에 추가] 메뉴를 선택합니다.\n3. 우측 상단 [추가]를 누르면 끝!");
+                } else if (isWhale()) {
+                    alert("🐳 네이버 웨일 설치 방법:\n\n1. 주소창 오른쪽에 있는 [앱 실행/설치(📥)] 아이콘을 누르거나,\n2. 우측 상단 메뉴(⋮) -> [대학맛집 룰렛 설치]를 클릭해 주세요!");
+                } else {
+                    alert("🌐 브라우저 설치 방법:\n\n1. 주소창 오른쪽의 [설치(📥)] 아이콘을 누르거나,\n2. 우측 상단 메뉴(⋮) -> [대학맛집 룰렛 설치]를 클릭해 주세요!");
+                }
             });
         }
+
+        // Show immediately if not installed
+        showInstallButton();
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // Native prompt is now ready, button will use it when clicked
+        });
 
         window.addEventListener('appinstalled', (evt) => {
             installContainer.style.display = 'none';
