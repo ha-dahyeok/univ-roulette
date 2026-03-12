@@ -1,34 +1,28 @@
 from flask import Flask, render_template, request, jsonify
 import os
-import time
-from collections import defaultdict
 from supabase import create_client, Client
 from dotenv import load_dotenv
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 load_dotenv()
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+# Rate Limiter 설정
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per minute"],
+    storage_uri="memory://"
+)
 
 # Supabase 설정
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-# 보안 2: 간단한 IP 기반 Rate Limiting (봇 공격 방어)
-request_history = defaultdict(list)
-MAX_REQUESTS_PER_MINUTE = 20  # 제보 요청 한도 (엄격)
-SEARCH_MAX_REQUESTS_PER_MINUTE = 100  # 검색 요청 한도 (여유)
-
-def is_rate_limited(ip, limit_type='report'):
-    now = time.time()
-    cache_key = f"{ip}_{limit_type}"
-    request_history[cache_key] = [t for t in request_history[cache_key] if now - t < 60]
-    
-    limit = SEARCH_MAX_REQUESTS_PER_MINUTE if limit_type == 'search' else MAX_REQUESTS_PER_MINUTE
-    if len(request_history[cache_key]) >= limit:
-        return True
-    request_history[cache_key].append(now)
-    return False
 
 @app.after_request
 def apply_security_headers(response):
@@ -50,14 +44,8 @@ def serve_manifest():
     return app.send_static_file('manifest.json')
 
 @app.route('/search')
+@limiter.limit("100 per minute")
 def search():
-    client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-    if client_ip:
-        client_ip = client_ip.split(',')[0].strip()
-    
-    if is_rate_limited(client_ip, limit_type='search'):
-        return jsonify({'error': '너무 많은 검색 요청이 발생했습니다. 1분 후에 다시 시도해주세요.'}), 429
-        
     univ = request.args.get('univ')
     try:
         target_price_level = int(request.args.get('target_price_level', 0))
@@ -89,14 +77,8 @@ def search():
     return jsonify(filtered_results)
 
 @app.route('/report_price', methods=['POST'])
+@limiter.limit("20 per minute", error_message='너무 많은 요청이 발생했습니다. 1분 후에 다시 시도해주세요.')
 def report_price():
-    client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-    if client_ip:
-        client_ip = client_ip.split(',')[0].strip()
-        
-    if is_rate_limited(client_ip, limit_type='report'):
-        return jsonify({'success': False, 'message': '너무 많은 요청이 발생했습니다. 1분 후에 다시 시도해주세요.'}), 429
-
     data = request.json
     if not data:
         return jsonify({'success': False, 'message': 'Invalid JSON'})
