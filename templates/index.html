@@ -168,6 +168,47 @@
         body {
             background-color: #f0f2f5;
         }
+
+        /* 앱 설치 버튼 스타일 */
+        #install-container {
+            display: none;
+            width: 100%;
+            max-width: 420px;
+            margin-bottom: 15px;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .install-banner {
+            background: #333;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .install-text {
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        .install-btn {
+            background: #fee500;
+            color: #333;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.85em;
+            cursor: pointer;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
     <!-- PWA Settings -->
     <link rel="manifest" href="/manifest.json">
@@ -183,6 +224,14 @@
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 </head>
+
+<body>
+    <div id="install-container">
+        <div class="install-banner">
+            <span class="install-text">📱 더 편하게 사용하려면?</span>
+            <button id="install-button" class="install-btn">앱으로 설치</button>
+        </div>
+    </div>
 
     <div class="card">
         <h1>🎡 대학맛집 룰렛</h1>
@@ -581,6 +630,56 @@
                 alert("서버와 통신하는 중 오류가 발생했습니다.");
             }
         }
+
+        // PWA Install Logic
+        let deferredPrompt;
+        const installContainer = document.getElementById('install-container');
+        const installButton = document.getElementById('install-button');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent Chrome 67 and earlier from automatically showing the prompt
+            e.preventDefault();
+            // Stash the event so it can be triggered later.
+            deferredPrompt = e;
+            // Update UI notify the user they can add to home screen
+            installContainer.style.display = 'block';
+
+            installButton.addEventListener('click', (e) => {
+                // hide our install promotion
+                installContainer.style.display = 'none';
+                // Show the prompt
+                deferredPrompt.prompt();
+                // Wait for the user to respond to the prompt
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    } else {
+                        console.log('User dismissed the install prompt');
+                    }
+                    deferredPrompt = null;
+                });
+            });
+        });
+
+        // Detect iOS to show manual instruction
+        const isIos = () => {
+            const userAgent = window.navigator.userAgent.toLowerCase();
+            return /iphone|ipad|ipod/.test(userAgent);
+        };
+        const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
+
+        if (isIos() && !isInStandaloneMode()) {
+            installContainer.style.display = 'block';
+            installButton.innerText = '설치 방법 보기';
+            installButton.addEventListener('click', () => {
+                alert("🍎 아이폰(iOS) 설치 방법:\n\n1. 하단 [공유(↑)] 버튼을 누릅니다.\n2. [홈 화면에 추가] 메뉴를 선택합니다.\n3. 우측 상단 [추가]를 누르면 끝!");
+            });
+        }
+
+        window.addEventListener('appinstalled', (evt) => {
+            installContainer.style.display = 'none';
+            console.log('App was installed');
+        });
 
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
