@@ -741,8 +741,13 @@
 
         // Function to show the button with specific logic
         function showInstallButton() {
-            if (isInStandaloneMode()) return; // Already installed, don't show
+            // CRITICAL: Only hide if we are ALREADY in standalone (app) mode
+            if (isInStandaloneMode()) {
+                installContainer.style.display = 'none';
+                return;
+            }
 
+            // Always show in browser mode
             installContainer.style.display = 'block';
 
             // Reset listeners to avoid duplicates
@@ -802,14 +807,13 @@
             modal.style.display = 'none';
         }
 
-        // Show immediately if not installed
+        // Show immediately if not in standalone (app) mode
         showInstallButton();
 
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            // Native prompt is now ready, ensure button is visible
-            showInstallButton();
+            // Native prompt is ready, visibility is already managed by showInstallButton()
         });
 
         window.addEventListener('appinstalled', (evt) => {
@@ -817,13 +821,6 @@
             installContainer.style.display = 'none';
             deferredPrompt = null;
         });
-
-        // Add a small delay check for browsers that might delay the prompt (especially after uninstallation)
-        setTimeout(() => {
-            if (!isInStandaloneMode() && !deferredPrompt && (isIos() || isWhale() || isChrome())) {
-                showInstallButton();
-            }
-        }, 3000);
 
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
