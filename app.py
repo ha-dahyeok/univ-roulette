@@ -37,11 +37,17 @@ def index():
 
 @app.route('/sw.js')
 def serve_sw():
-    return app.send_static_file('sw.js')
+    response = app.send_static_file('sw.js')
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 @app.route('/manifest.json')
 def serve_manifest():
-    return app.send_static_file('manifest.json')
+    response = app.send_static_file('manifest.json')
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
 
 @app.route('/search')
 @limiter.limit("100 per minute")

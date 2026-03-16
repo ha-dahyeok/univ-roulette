@@ -1,4 +1,4 @@
-const CACHE_NAME = 'univ-roulette-v2';
+const CACHE_NAME = 'univ-roulette-v3';
 const urlsToCache = [
     '/',
     '/manifest.json',
