@@ -106,4 +106,49 @@ def report_price():
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', debug=False, port=port)
+    
+    # 클라우드 배포 환경(Render 등)에서는 터널 없이 실행
+    if os.environ.get("PORT"):
+        app.run(host='0.0.0.0', debug=False, port=port)
+    else:
+        # 로컬 개발: Cloudflare 터널 자동 실행
+        import subprocess
+        import threading
+        import re
+        import sys
+        import time
+
+        def start_tunnel():
+            cloudflared_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cloudflared.exe')
+            if not os.path.exists(cloudflared_path):
+                return
+            
+            for _ in range(5):
+                try:
+                    process = subprocess.Popen(
+                        [cloudflared_path, 'tunnel', '--url', f'http://localhost:{port}'],
+                        stderr=subprocess.PIPE, stdout=subprocess.DEVNULL, text=True
+                    )
+                    start_time = time.time()
+                    for line in process.stderr:
+                        if time.time() - start_time > 30:
+                            break
+                        if 'trycloudflare.com' in line:
+                            match = re.search(r'(https://\S+\.trycloudflare\.com)', line)
+                            if match:
+                                print(f" * Tunnel: {match.group(1)}")
+                                sys.stdout.flush()
+                                for line in process.stderr:
+                                    pass
+                                return
+                    process.kill()
+                    time.sleep(10)
+                except Exception:
+                    pass
+            print(" * Tunnel: 연결 실패 (Cloudflare API 장애)")
+            sys.stdout.flush()
+
+        tunnel_thread = threading.Thread(target=start_tunnel, daemon=True)
+        tunnel_thread.start()
+        
+        app.run(host='127.0.0.1', debug=False, port=port)
