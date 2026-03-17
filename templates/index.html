@@ -13,7 +13,8 @@
             padding: 20px;
             margin: 0;
             display: flex;
-            flex-direction: column; /* Stack banner and card vertically */
+            flex-direction: column;
+            /* Stack banner and card vertically */
             justify-content: center;
             align-items: center;
             min-height: 100vh;
@@ -207,9 +208,17 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
+
         /* PWA Install Modal */
         #install-modal {
             display: none;
@@ -218,11 +227,12 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.6);
+            background: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(5px);
             z-index: 2000;
             animation: fadeIn 0.3s ease;
         }
+
         .modal-content {
             position: absolute;
             top: 50%;
@@ -234,8 +244,9 @@
             width: 90%;
             max-width: 400px;
             text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
         }
+
         .modal-header {
             font-size: 1.4rem;
             font-weight: 700;
@@ -246,18 +257,21 @@
             justify-content: center;
             gap: 10px;
         }
+
         .modal-body {
             text-align: left;
             margin-bottom: 25px;
             line-height: 1.6;
             color: #555;
         }
+
         .step-item {
             margin-bottom: 12px;
             display: flex;
             gap: 12px;
             align-items: flex-start;
         }
+
         .step-num {
             background: #FFD600;
             color: black;
@@ -271,6 +285,7 @@
             flex-shrink: 0;
             font-size: 12px;
         }
+
         .modal-footer button {
             width: 100%;
             padding: 12px;
@@ -281,12 +296,19 @@
             cursor: pointer;
             transition: transform 0.2s;
         }
+
         .modal-footer button:active {
             transform: scale(0.98);
         }
+
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
     </style>
     <!-- PWA Settings -->
@@ -359,7 +381,7 @@
     <script>
         function escapeHTML(str) {
             if (!str) return "";
-            return str.replace(/[&<>'"]/g, function(tag) {
+            return str.replace(/[&<>'"]/g, function (tag) {
                 const charsToReplace = { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' };
                 return charsToReplace[tag] || tag;
             });
@@ -755,16 +777,33 @@
             // Reset listeners to avoid duplicates
             const newButton = installButton.cloneNode(true);
             installButton.parentNode.replaceChild(newButton, installButton);
-            
-            newButton.addEventListener('click', () => {
+
+            newButton.addEventListener('click', async () => {
                 if (deferredPrompt) {
-                    deferredPrompt.prompt();
-                    deferredPrompt.userChoice.then((choiceResult) => {
-                        if (choiceResult.outcome === 'accepted') {
-                            installContainer.style.display = 'none';
+                    try {
+                        // 1. 상태 변경: 설치 시도 중 (중복 클릭 방지)
+                        const originalText = newButton.innerText;
+                        newButton.innerText = "설치 시도 중...";
+                        newButton.disabled = true;
+
+                        await deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        
+                        if (outcome === 'dismissed') {
+                            // 2-1. 거절 시: 버튼 복구
+                            newButton.innerText = originalText;
+                            newButton.disabled = false;
+                        } else {
+                            // 2-2. 승인 시: 최종 대기 상태
+                            newButton.innerText = "설치 대기 중...";
                         }
                         deferredPrompt = null;
-                    });
+                    } catch (err) {
+                        // 오류 발생 시 즉시 복구
+                        console.error('PWA Install Error:', err);
+                        newButton.innerText = "앱으로 설치";
+                        newButton.disabled = false;
+                    }
                 } else {
                     showCustomModal();
                 }
@@ -820,7 +859,21 @@
 
         window.addEventListener('appinstalled', (evt) => {
             console.log('App was installed');
-            installContainer.style.display = 'none';
+            // 3. 설치 성공 피드백 후 부드럽게 퇴장
+            const textElement = installContainer.querySelector('.install-text');
+            const buttonElement = installContainer.querySelector('.install-btn');
+            
+            if (textElement) textElement.innerText = "설치 완료! 즐거운 맛집 탐방 되세요! 🎉";
+            if (buttonElement) buttonElement.style.display = 'none';
+
+            setTimeout(() => {
+                installContainer.style.transition = "opacity 1s ease-out";
+                installContainer.style.opacity = "0";
+                setTimeout(() => {
+                    installContainer.style.display = 'none';
+                }, 1000);
+            }, 3000);
+
             deferredPrompt = null;
         });
 
