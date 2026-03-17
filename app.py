@@ -87,15 +87,27 @@ def search():
     
     filtered_results = []
     for doc in restaurant_data:
-        # doc이 dict임을 보장하고 안전하게 필드 추출
-        item = dict(doc)
-        result = {
-            'place_name': str(item.get('name', '이름 없음')),
-            'category_name': f"음식점 > {str(item.get('category', '기타'))}",
-            'place_url': str(item.get('url', '#'))
+        # doc이 dict임을 보장하고 안전하게 필드 추출 (Any 캐스팅으로 Pyright의 잘못된 bytes 추론 방지)
+        item: Any = doc
+        
+        # 기본 필드 추출 (안전을 위해 dict 체크 포함)
+        is_dict = isinstance(item, dict)
+        name = item.get('name', '이름 없음') if is_dict else '이름 없음'
+        category = item.get('category', '기타') if is_dict else '기타'
+        url = item.get('url', '#') if is_dict else '#'
+        
+        result: dict[str, Any] = {
+            'place_name': str(name),
+            'category_name': f"음식점 > {str(category)}",
+            'place_url': str(url)
         }
+        
         # 나머지 모든 원본 필드 포함
-        result.update({k: v for k, v in item.items() if k not in ['place_name', 'category_name', 'place_url']})
+        if is_dict:
+            for k, v in item.items():
+                if k not in ['name', 'category', 'url']:
+                    result[str(k)] = v
+        
         filtered_results.append(result)
                 
     return jsonify(filtered_results)
