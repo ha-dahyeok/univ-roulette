@@ -843,57 +843,16 @@
             installButton.disabled = false;
         });
 
-        // PWA Service Worker Registration & Auto-Update Logic
+        // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
                     .then(registration => {
                         console.log('ServiceWorker registration successful with scope: ', registration.scope);
-
-                        let waitingWorker = null;
-
-                        // 1. 새로운 업데이트가 발견되었을 때
-                        registration.addEventListener('updatefound', () => {
-                            const newWorker = registration.installing;
-                            newWorker.addEventListener('statechange', () => {
-                                // 2. 새 워커가 설치 완료되었고 기존 워커가 있으면 업데이트 대기 상태
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    console.log('새로운 버전 대기 중...');
-                                    waitingWorker = newWorker;
-                                    
-                                    // 만약 문서가 숨겨진 상태에서 다운이 완료되었다면 바로 교체
-                                    if (document.visibilityState === 'hidden') {
-                                        waitingWorker.postMessage({ type: 'SKIP_WAITING' });
-                                    }
-                                }
-                            });
-                        });
-
-                        // 3. 앱(웹)이 백그라운드에 갔다가 다시 불렸을 때 처리
-                        document.addEventListener('visibilitychange', () => {
-                            if (document.visibilityState === 'visible') {
-                                // 화면이 다시 켜졌을 때 백그라운드에서 업데이트 수동 스캔
-                                registration.update();
-
-                                // 대기 중인 새 버전이 있었다면 화면을 켠 직후 교체 -> 새로고침
-                                if (waitingWorker) {
-                                    waitingWorker.postMessage({ type: 'SKIP_WAITING' });
-                                }
-                            }
-                        });
                     })
                     .catch(err => {
                         console.log('ServiceWorker registration failed: ', err);
                     });
-
-                // 4. 서비스 워커 제어권이 새 버전으로 교체(activate)되면, 화면을 자동으로 새로고침
-                let refreshing = false;
-                navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    if (!refreshing) {
-                        refreshing = true;
-                        window.location.reload();
-                    }
-                });
             });
         }
     </script>
