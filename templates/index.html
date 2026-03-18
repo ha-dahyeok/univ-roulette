@@ -763,52 +763,36 @@
         };
         const isInStandaloneMode = () => (window.navigator.standalone === true) || (window.matchMedia('(display-mode: standalone)').matches);
 
-        // Function to show the button with specific logic
-        function showInstallButton() {
-            // CRITICAL: Only hide if we are ALREADY in standalone (app) mode
-            if (isInStandaloneMode()) {
-                installContainer.style.display = 'none';
-                return;
-            }
-
-            // Always show in browser mode
+        // iOS는 설치 감지가 어려우므로 앱 상태가 아닐 땐 매번 보여주기로 결정됨
+        if (isIos() && !isInStandaloneMode()) {
             installContainer.style.display = 'block';
-
-            // Reset listeners to avoid duplicates
-            const newButton = installButton.cloneNode(true);
-            installButton.parentNode.replaceChild(newButton, installButton);
-
-            newButton.addEventListener('click', async () => {
-                if (deferredPrompt) {
-                    try {
-                        // 1. 상태 변경: 설치 시도 중 (중복 클릭 방지)
-                        const originalText = newButton.innerText;
-                        newButton.innerText = "설치 시도 중...";
-                        newButton.disabled = true;
-
-                        await deferredPrompt.prompt();
-                        const { outcome } = await deferredPrompt.userChoice;
-                        
-                        if (outcome === 'dismissed') {
-                            // 2-1. 거절 시: 버튼 복구
-                            newButton.innerText = originalText;
-                            newButton.disabled = false;
-                        } else {
-                            // 2-2. 승인 시: 최종 대기 상태
-                            newButton.innerText = "설치 대기 중...";
-                        }
-                        deferredPrompt = null;
-                    } catch (err) {
-                        // 오류 발생 시 즉시 복구
-                        console.error('PWA Install Error:', err);
-                        newButton.innerText = "앱으로 설치";
-                        newButton.disabled = false;
-                    }
-                } else {
-                    showCustomModal();
-                }
-            });
+            installButton.addEventListener('click', showCustomModal);
         }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Android 등 `beforeinstallprompt`를 지원하는 환경 (PWA 설치 가능한 환경)
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // 이미 앱 상태(Standalone)가 아닐 경우에만 버튼을 보여줌
+            if (!isInStandaloneMode()) {
+                installContainer.style.display = 'block';
+                
+                installButton.onclick = async () => {
+                    // 버튼 텍스트 변경 없이 네이티브 프롬프트만 띄움
+                    await deferredPrompt.prompt();
+                    
+                    const { outcome } = await deferredPrompt.userChoice;
+                    
+                    if (outcome === 'accepted') {
+                        // 사용자가 네이티브 팝업에서 "설치"를 눌렀을 때 비로소 상태 변경
+                        installButton.innerText = "설치 시도 중...";
+                        installButton.disabled = true;
+                    }
+                    deferredPrompt = null;
+                };
+            }
+        });
 
         const modal = document.getElementById('install-modal');
         const modalBody = document.getElementById('modal-body');
@@ -848,14 +832,6 @@
             modal.style.display = 'none';
         }
 
-        // Show immediately if not in standalone (app) mode
-        showInstallButton();
-
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            // Native prompt is ready, visibility is already managed by showInstallButton()
-        });
 
         window.addEventListener('appinstalled', (evt) => {
             console.log('App was installed');
