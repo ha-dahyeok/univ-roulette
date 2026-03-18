@@ -72,9 +72,11 @@ def search():
         target_price_level = 0
     
     try:
-        query = supabase.table("restaurants").select("*")
-        if univ:
-            query = query.eq("univ", univ)
+        if not univ:
+            return jsonify({'error': '대학교 이름이 필요합니다.'}), 400
+            
+        query = supabase.table("restaurants").select("*").eq("univ", univ)
+        
         if target_price_level != 0:
             query = query.eq("price_level", target_price_level)
         
