@@ -774,11 +774,11 @@
             e.preventDefault();
             deferredPrompt = e;
             
-            // 이미 앱 상태(Standalone)가 아닐 경우에만 버튼을 보여줌
-            if (!isInStandaloneMode()) {
-                installContainer.style.display = 'block';
-                
-                installButton.onclick = async () => {
+            // 앱 상태(Standalone)인 경우에도 버튼을 숨기지 않음
+            installContainer.style.display = 'block';
+            
+            installButton.onclick = async () => {
+                if (deferredPrompt) {
                     // 버튼 텍스트 변경 없이 네이티브 프롬프트만 띄움
                     await deferredPrompt.prompt();
                     
@@ -789,9 +789,14 @@
                         installButton.innerText = "설치 시도 중...";
                         installButton.disabled = true;
                     }
+                    // 프롬프트는 한 번 띄우면 소모되므로 처리 완료 후 null
                     deferredPrompt = null;
-                };
-            }
+                } else {
+                    // 이미 한 번 설치 프롬프트를 띄운 후 (혹은 설치된 후) 다시 눌렀을 때
+                    // 매뉴얼 설치 모달을 띄워 반복 설치 안내를 제공 (원하는 무한 반복 설치 트리거 대체)
+                    showCustomModal();
+                }
+            };
         });
 
         const modal = document.getElementById('install-modal');
@@ -835,22 +840,9 @@
 
         window.addEventListener('appinstalled', (evt) => {
             console.log('App was installed');
-            // 3. 설치 성공 피드백 후 부드럽게 퇴장
-            const textElement = installContainer.querySelector('.install-text');
-            const buttonElement = installContainer.querySelector('.install-btn');
-            
-            if (textElement) textElement.innerText = "설치 완료! 즐거운 맛집 탐방 되세요! 🎉";
-            if (buttonElement) buttonElement.style.display = 'none';
-
-            setTimeout(() => {
-                installContainer.style.transition = "opacity 1s ease-out";
-                installContainer.style.opacity = "0";
-                setTimeout(() => {
-                    installContainer.style.display = 'none';
-                }, 1000);
-            }, 3000);
-
-            deferredPrompt = null;
+            // 설치 완료 후에도 버튼을 숨기지 않고 원래 텍스트로 복구
+            installButton.innerText = "앱으로 설치";
+            installButton.disabled = false;
         });
 
         // PWA Service Worker Registration
