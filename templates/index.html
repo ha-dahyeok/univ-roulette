@@ -842,16 +842,42 @@
             installButton.disabled = false;
         });
 
-        // PWA Service Worker Registration
+        // PWA Service Worker Registration & Auto-Update Logic
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
                     .then(registration => {
                         console.log('ServiceWorker registration successful with scope: ', registration.scope);
+
+                        // 1. 새로운 업데이트가 발견되었을 때
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                // 2. 새 서비스워커가 설치 완료되었고, 기존에 이미 활성화된 워커가 있다면 (즉, 업데이트라면)
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('새로운 버전이 업데이트 되었습니다! 자동 새로고침을 진행합니다.');
+                                    
+                                    // 3. (옵션) 사용자에게 알림 띠를 띄워주고 싶다면 여기에 UI 코드를 넣습니다.
+                                    // 현재는 백그라운드에서 즉시 강제 새로고침 시키도록 아래 로직으로 넘깁니다.
+                                    
+                                    // 대기 중인 새 워커에게 즉시 활성화(Skip Waiting)하라는 메시지 전송
+                                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                }
+                            });
+                        });
                     })
                     .catch(err => {
                         console.log('ServiceWorker registration failed: ', err);
                     });
+
+                // 4. 서비스 워커 제어권이 새 버전으로 교체(activate)되면, 화면을 자동으로 새로고침
+                let refreshing = false;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (!refreshing) {
+                        refreshing = true;
+                        window.location.reload();
+                    }
+                });
             });
         }
     </script>

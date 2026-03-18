@@ -1,4 +1,4 @@
-const CACHE_NAME = 'univ-roulette-v3';
+const CACHE_NAME = 'univ-roulette-v4';
 const urlsToCache = [
     '/',
     '/manifest.json',
@@ -8,13 +8,20 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', event => {
-    self.skipWaiting(); // Force the waiting service worker to become the active service worker
+    // skipWaiting()은 이제 message 이벤트에서 명시적으로 호출합니다.
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
                 return cache.addAll(urlsToCache);
             })
     );
+});
+
+// 클라이언트(페이지)로부터 활성화(업데이트) 요청을 받았을 때 즉시 대기 상태를 건너뜀
+self.addEventListener('message', event => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
 });
 
 self.addEventListener('activate', event => {
