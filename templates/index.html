@@ -346,7 +346,7 @@
     <div id="install-container">
         <div class="install-banner">
             <span class="install-text">📱 더 편하게 사용하려면?</span>
-            <button id="install-button" class="install-btn">앱으로 설치</button>
+            <button id="install-button" class="install-btn">앱으로 설치하려면?</button>
         </div>
     </div>
 
@@ -772,6 +772,9 @@
             e.preventDefault();
             deferredPrompt = e;
             
+            // 지원되는 환경에서는 버튼 텍스트를 원래대로 변경
+            installButton.innerText = "앱으로 설치";
+            
             // `beforeinstallprompt`가 지원되는 환경에서는 네이티브 프롬프트를 띄우도록 이벤트 핸들러 덮어쓰기
             installButton.onclick = async () => {
                 if (deferredPrompt) {
@@ -803,11 +806,27 @@
         function showCustomModal() {
             modalTitle.innerText = "앱 설치 안내";
             modalIcon.innerText = "📥";
-            modalBody.innerHTML = `
-                <div class="step-item"><div class="step-num">1</div><div>화면의 <b>[공유(↑)]</b> 또는 <b>[메뉴(⋮)]</b> 버튼을 누릅니다.</div></div>
-                <div class="step-item"><div class="step-num">2</div><div><b>[홈 화면에 추가]</b> 또는 <b>[다른 브라우저로 열기]</b>를 선택합니다.</div></div>
-                <div class="step-item"><div class="step-num">3</div><div>(새 브라우저로 열린 경우 다시 <b>[앱으로 설치]</b>를 진행해주세요)</div></div>
-            `;
+            
+            let content = "";
+            if (isIos()) {
+                content = `
+                    <div class="step-item"><div class="step-num">1</div><div>하단 <b>[공유(↑)]</b> 버튼을 누릅니다.</div></div>
+                    <div class="step-item"><div class="step-num">2</div><div>메뉴 중 <b>[홈 화면에 추가]</b>를 누릅니다.</div></div>
+                    <div class="step-item"><div class="step-num">3</div><div>우측 상단의 <b>[추가]</b>를 누르면 완료!</div></div>
+                `;
+            } else if (isWhale()) {
+                content = `
+                    <div class="step-item"><div class="step-num">1</div><div>주소창 우측의 <b>[앱 실행/설치(📥)]</b> 아이콘을 클릭하거나,</div></div>
+                    <div class="step-item"><div class="step-num">2</div><div>우측 상단 <b>메뉴(⋮)</b>에서 <b>[대학맛집 룰렛 설치]</b>를 선택해 주세요!</div></div>
+                `;
+            } else {
+                content = `
+                    <div class="step-item"><div class="step-num">1</div><div>화면 우측 하단의 <b>[메뉴(⋮)]</b> 버튼을 누릅니다.</div></div>
+                    <div class="step-item"><div class="step-num">2</div><div><b>[다른 브라우저로 열기]</b>를 선택합니다.</div></div>
+                    <div class="step-item"><div class="step-num">3</div><div>새 브라우저에서 다시 <b>[앱으로 설치]</b>를 진행해주세요!</div></div>
+                `;
+            }
+            modalBody.innerHTML = content;
             modal.style.display = 'block';
         }
 
