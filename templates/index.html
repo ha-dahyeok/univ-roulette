@@ -173,7 +173,7 @@
 
         /* 앱 설치 버튼 스타일 */
         #install-container {
-            display: none;
+            display: block;
             width: 100%;
             max-width: 420px;
             margin-bottom: 15px;
@@ -755,6 +755,7 @@
         const installButton = document.getElementById('install-button');
 
         // Check for specific browsers
+        const isKakao = () => /kakaotalk/i.test(window.navigator.userAgent);
         const isWhale = () => /whale/i.test(window.navigator.userAgent);
         const isChrome = () => /chrome|chromium|crios/i.test(window.navigator.userAgent) && !/edg|whale|opr/i.test(window.navigator.userAgent);
         const isIos = () => {
@@ -763,20 +764,16 @@
         };
         const isInStandaloneMode = () => (window.navigator.standalone === true) || (window.matchMedia('(display-mode: standalone)').matches);
 
-        // iOS는 설치 감지가 어려우므로 앱 상태가 아닐 땐 매번 보여주기로 결정됨
-        if (isIos() && !isInStandaloneMode()) {
-            installContainer.style.display = 'block';
-            installButton.addEventListener('click', showCustomModal);
-        }
+        // 기본적으로 항상 버튼이 보이도록 설정됨 (CSS display: block)
+        // 기본 클릭 동작은 커스텀 모달 띄우기 (카카오톡 인앱 브라우저 등 PWA 미지원 환경 대비)
+        installButton.onclick = showCustomModal;
 
         window.addEventListener('beforeinstallprompt', (e) => {
             // Android 등 `beforeinstallprompt`를 지원하는 환경 (PWA 설치 가능한 환경)
             e.preventDefault();
             deferredPrompt = e;
             
-            // 앱 상태(Standalone)인 경우에도 버튼을 숨기지 않음
-            installContainer.style.display = 'block';
-            
+            // `beforeinstallprompt`가 지원되는 환경에서는 네이티브 프롬프트를 띄우도록 이벤트 핸들러 덮어쓰기
             installButton.onclick = async () => {
                 if (deferredPrompt) {
                     // 버튼 텍스트 변경 없이 네이티브 프롬프트만 띄움
@@ -806,7 +803,15 @@
 
         function showCustomModal() {
             let content = "";
-            if (isIos()) {
+            if (isKakao()) {
+                modalTitle.innerText = "카카오톡에서 앱 설치 방법";
+                modalIcon.innerText = "💬";
+                content = `
+                    <div class="step-item"><div class="step-num">1</div><div>우측 하단의 <b>메뉴(⋮)</b>를 누릅니다.</div></div>
+                    <div class="step-item"><div class="step-num">2</div><div><b>[다른 브라우저로 열기]</b>를 선택합니다.</div></div>
+                    <div class="step-item"><div class="step-num">3</div><div>새 브라우저에서 <b>[앱으로 설치]</b>를 눌러주세요!</div></div>
+                `;
+            } else if (isIos()) {
                 modalTitle.innerText = "아이폰 설치 방법";
                 modalIcon.innerText = "🍎";
                 content = `
