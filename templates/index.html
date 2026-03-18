@@ -772,18 +772,18 @@
             // Android 등 `beforeinstallprompt`를 지원하는 환경 (PWA 설치 가능한 환경)
             e.preventDefault();
             deferredPrompt = e;
-            
+
             // 지원되는 환경에서는 버튼 텍스트를 원래대로 변경
             installButton.innerText = "앱으로 설치";
-            
+
             // `beforeinstallprompt`가 지원되는 환경에서는 네이티브 프롬프트를 띄우도록 이벤트 핸들러 덮어쓰기
             installButton.onclick = async () => {
                 if (deferredPrompt) {
                     // 버튼 텍스트 변경 없이 네이티브 프롬프트만 띄움
                     await deferredPrompt.prompt();
-                    
+
                     const { outcome } = await deferredPrompt.userChoice;
-                    
+
                     if (outcome === 'accepted') {
                         // 사용자가 네이티브 팝업에서 "설치"를 눌렀을 때 비로소 상태 변경
                         installButton.innerText = "설치 시도 중...";
@@ -807,7 +807,7 @@
         function showCustomModal() {
             modalTitle.innerText = "앱 설치 안내";
             modalIcon.innerText = "📥";
-            
+
             let content = "";
             if (isIos()) {
                 content = `
@@ -850,21 +850,36 @@
                     .then(registration => {
                         console.log('ServiceWorker registration successful with scope: ', registration.scope);
 
+                        let waitingWorker = null;
+
                         // 1. 새로운 업데이트가 발견되었을 때
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
                             newWorker.addEventListener('statechange', () => {
-                                // 2. 새 서비스워커가 설치 완료되었고, 기존에 이미 활성화된 워커가 있다면 (즉, 업데이트라면)
+                                // 2. 새 워커가 설치 완료되었고 기존 워커가 있으면 업데이트 대기 상태
                                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    console.log('새로운 버전이 업데이트 되었습니다! 자동 새로고침을 진행합니다.');
+                                    console.log('새로운 버전 대기 중...');
+                                    waitingWorker = newWorker;
                                     
-                                    // 3. (옵션) 사용자에게 알림 띠를 띄워주고 싶다면 여기에 UI 코드를 넣습니다.
-                                    // 현재는 백그라운드에서 즉시 강제 새로고침 시키도록 아래 로직으로 넘깁니다.
-                                    
-                                    // 대기 중인 새 워커에게 즉시 활성화(Skip Waiting)하라는 메시지 전송
-                                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                    // 만약 문서가 숨겨진 상태에서 다운이 완료되었다면 바로 교체
+                                    if (document.visibilityState === 'hidden') {
+                                        waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+                                    }
                                 }
                             });
+                        });
+
+                        // 3. 앱(웹)이 백그라운드에 갔다가 다시 불렸을 때 처리
+                        document.addEventListener('visibilitychange', () => {
+                            if (document.visibilityState === 'visible') {
+                                // 화면이 다시 켜졌을 때 백그라운드에서 업데이트 수동 스캔
+                                registration.update();
+
+                                // 대기 중인 새 버전이 있었다면 화면을 켠 직후 교체 -> 새로고침
+                                if (waitingWorker) {
+                                    waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+                                }
+                            }
                         });
                     })
                     .catch(err => {
