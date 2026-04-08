@@ -1,0 +1,28 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    # Runs at 00:00 on every 3rd day
+    - cron: '0 0 */3 * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase Database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
+            echo "Error: SUPABASE_URL or SUPABASE_KEY is not set as GitHub Secrets."
+            exit 1
+          fi
+          
+          echo "Pinging Supabase to prevent pausing..."
+          curl -X GET "${SUPABASE_URL}/rest/v1/restaurants?select=*&limit=1" \
+               -H "apikey: ${SUPABASE_KEY}" \
+               -H "Authorization: Bearer ${SUPABASE_KEY}" \
+               -H "Content-Profile: public"
+          echo -e "\nDone!"
