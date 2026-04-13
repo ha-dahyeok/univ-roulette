@@ -2,8 +2,8 @@ name: Keep Supabase Alive
 
 on:
   schedule:
-    # Runs at 00:00 every day
-    - cron: '0 0 * * *'
+    # Runs at 15:27 UTC every day to avoid GitHub Action peak hour delays
+    - cron: '27 15 * * *'
   workflow_dispatch: # Allows manual trigger from GitHub UI
 
 jobs:
