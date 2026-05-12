@@ -62,6 +62,17 @@ def make_kakao_query(univ_name):
         return f"{main} {camp}캠퍼스"
     return univ_name
 
+def safe_get(url, headers=None, timeout=5, retries=3):
+    for i in range(retries):
+        try:
+            return requests.get(url, headers=headers, timeout=timeout)
+        except Exception as e:
+            if i < retries - 1:
+                time.sleep(1)
+            else:
+                print(f"API Error ({url}): {e}")
+    return None
+
 def process_univ(univ_name):
     headers = {"Authorization": f"KakaoAK {KAKAO_API_KEY}"}
     query_univ = make_kakao_query(univ_name)
@@ -70,8 +81,8 @@ def process_univ(univ_name):
     center_coord = None
     try:
         c_url = f"https://dapi.kakao.com/v2/local/search/keyword.json?query={univ_name}&size=1"
-        res = requests.get(c_url, headers=headers, timeout=5)
-        if res.status_code == 200 and res.json().get('documents'):
+        res = safe_get(c_url, headers=headers, timeout=5)
+        if res and res.status_code == 200 and res.json().get('documents'):
             doc = res.json()['documents'][0]
             center_coord = (float(doc['x']), float(doc['y']))
     except: pass
@@ -88,8 +99,8 @@ def process_univ(univ_name):
         for a_query in anchors_strict:
             try:
                 u_url = f"https://dapi.kakao.com/v2/local/search/keyword.json?query={a_query}&size=1"
-                res = requests.get(u_url, headers=headers, timeout=5)
-                if res.status_code == 200 and res.json().get('documents'):
+                res = safe_get(u_url, headers=headers, timeout=5)
+                if res and res.status_code == 200 and res.json().get('documents'):
                     doc = res.json()['documents'][0]
                     if doc['place_name'].strip() != query_univ: # Don't just get center again
                         gx, gy = float(doc['x']), float(doc['y'])
@@ -113,8 +124,8 @@ def process_univ(univ_name):
             for a_query in anchors_flex:
                 try:
                     u_url = f"https://dapi.kakao.com/v2/local/search/keyword.json?query={a_query}&size=3"
-                    res = requests.get(u_url, headers=headers, timeout=5)
-                    if res.status_code == 200 and res.json().get('documents'):
+                    res = safe_get(u_url, headers=headers, timeout=5)
+                    if res and res.status_code == 200 and res.json().get('documents'):
                         for doc in res.json()['documents']:
                             p_name = doc['place_name']
                             gx, gy = float(doc['x']), float(doc['y'])
@@ -164,8 +175,8 @@ def process_univ(univ_name):
                     url = f"https://dapi.kakao.com/v2/local/search/keyword.json?query={q_params['query']}&x={u_x}&y={u_y}&radius={search_radius}&page={page}&size=15"
                 
                 try:
-                    res = requests.get(url, headers=headers, timeout=5)
-                    if res.status_code != 200: break
+                    res = safe_get(url, headers=headers, timeout=5)
+                    if not res or res.status_code != 200: break
                     docs = res.json().get('documents', [])
                     if not docs: break
                     for doc in docs:
