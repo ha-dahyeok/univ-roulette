@@ -15,8 +15,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _searchController = TextEditingController();
-  String _selectedUniv = '';
+  final _searchController = TextEditingController(text: '고려대학교 서울캠퍼스');
+  String _selectedUniv = '고려대학교 서울캠퍼스';
   int _selectedBudget = 1;
   final List<String> _selectedGates = [];
   

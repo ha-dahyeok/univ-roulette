@@ -26,6 +26,7 @@ class CampusRouletteApp extends StatelessWidget {
           primary: const Color(0xFFFEE500),
           secondary: const Color(0xFFFF5C5C),
         ),
+        scaffoldBackgroundColor: Colors.white,
         useMaterial3: true,
         fontFamily: 'Pretendard',
       ),
