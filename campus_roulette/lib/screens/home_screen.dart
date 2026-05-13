@@ -15,8 +15,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _searchController = TextEditingController(text: '고려대학교 서울캠퍼스');
-  String _selectedUniv = '고려대학교 서울캠퍼스';
+  String _selectedUniv = targetUniversities[1]; // 기본값: 고려대학교 서울캠퍼스
   int _selectedBudget = 1;
   final List<String> _selectedGates = [];
   
@@ -31,7 +30,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    _searchController.dispose();
     _fortuneController.close();
     super.dispose();
   }
@@ -59,12 +57,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
       List<Map<String, dynamic>> data = List<Map<String, dynamic>>.from(response);
       
-      // 기획서 3.2: 출입구 다중 선택 필터 로직 (현재 DB상 완벽한 데이터가 없으므로 프론트엔드 모의 필터 적용)
-      if (_selectedGates.isNotEmpty && _selectedGates.length < 3) {
-        // 출입구가 선택되었을 때, 랜덤으로 일부 식당을 걸러내는 식으로 UI 필터 효과를 줍니다.
-        // 향후 DB에 gate 정보가 추가되면 eq('gate', ...) 로 변경 가능
-        data.shuffle();
-        data = data.take((data.length / 2).ceil()).toList();
+      // 진짜 필터 로직: DB의 'gates' 필드(콤마 분리 문자열)에 선택된 출입구가 하나라도 포함되어 있는지 확인
+      if (_selectedGates.isNotEmpty) {
+        data = data.where((restaurant) {
+          final gatesStr = restaurant['gates']?.toString() ?? '';
+          return _selectedGates.any((gate) => gatesStr.contains(gate));
+        }).toList();
       }
 
       data.shuffle();
@@ -189,53 +187,36 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. 대학교 검색
-            Autocomplete<String>(
-              optionsBuilder: (TextEditingValue textEditingValue) {
-                if (textEditingValue.text.isEmpty) {
-                  return const Iterable<String>.empty();
-                }
-                return koreanUnivs.where((String option) {
-                  return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
-                });
-              },
-              onSelected: (String selection) {
-                setState(() {
-                  _selectedUniv = selection;
-                });
-              },
-              fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
-                if (controller.text != _searchController.text) {
-                  _searchController.text = controller.text;
-                }
-                return TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  decoration: InputDecoration(
-                    labelText: '대학교 검색 (예: 고려대)',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    prefixIcon: const Icon(Icons.search),
-                  ),
-                  onChanged: (val) {
-                    _searchController.text = val;
-                    if (val.isEmpty) {
+            // 1. 대학교 검색 (객관식 선택)
+            const Text('🎓 대학교 선택', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: targetUniversities.map((univ) {
+                return ChoiceChip(
+                  label: Text(univ),
+                  selected: _selectedUniv == univ,
+                  onSelected: (selected) {
+                    if (selected) {
                       setState(() {
-                        _selectedUniv = '';
+                        _selectedUniv = univ;
+                        _selectedGates.clear(); // 대학이 바뀌면 선택된 게이트 초기화
                       });
                     }
                   },
                 );
-              },
+              }).toList(),
             ),
             const SizedBox(height: 20),
             
-            // 2. 캠퍼스 게이트 마이크로 타겟팅 필터
+            // 2. 캠퍼스 게이트 동적 필터
             if (_selectedUniv.isNotEmpty) ...[
               const Text('📍 어디로 나갈 예정인가요? (다중 선택 가능)', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Wrap(
                 spacing: 8,
-                children: ['정문', '후문', '자연계 캠퍼스 입구'].map((gate) {
+                children: (universityGates[_selectedUniv] ?? []).map((gate) {
                   final isSelected = _selectedGates.contains(gate);
                   return FilterChip(
                     label: Text(gate),
