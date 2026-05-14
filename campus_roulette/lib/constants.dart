@@ -31,6 +31,11 @@ const Map<String, List<String>> universityGates = {
     "리치과학관 입구",
     "인문대학 후문"
   ],
+  "인하대학교 용현캠퍼스": [
+    "정문",
+    "의과대학 입구",
+    "후문"
+  ],
 };
 
 const List<String> targetUniversities = [
@@ -41,4 +46,5 @@ const List<String> targetUniversities = [
   "홍익대학교 서울캠퍼스",
   "한양대학교 서울캠퍼스",
   "서강대학교 서울캠퍼스",
+  "인하대학교 용현캠퍼스",
 ];
