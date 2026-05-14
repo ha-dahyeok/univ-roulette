@@ -574,7 +574,7 @@ class _HomeScreenState extends State<HomeScreen>
                     curve: Curves.easeInOutCubic,
                     child: _selectedUniv.isEmpty
                         ? Padding(
-                            padding: const EdgeInsets.only(top: 40, bottom: 40),
+                            padding: const EdgeInsets.only(top: 10, bottom: 40),
                             child: Column(
                               children: [
                                 const Icon(
