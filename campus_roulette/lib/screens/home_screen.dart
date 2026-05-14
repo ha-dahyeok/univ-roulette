@@ -392,6 +392,7 @@ class _HomeScreenState extends State<HomeScreen>
     if (_selectedUniv.contains('건국')) return const Color(0xFF006633); // 건국 그린
     if (_selectedUniv.contains('홍익')) return const Color(0xFF00205B); // 홍익 블루 (Navy)
     if (_selectedUniv.contains('한양')) return const Color(0xFF003B71); // 한양 블루
+    if (_selectedUniv.contains('서강')) return const Color(0xFFB60005); // 서강 레드 (Crimson)
     return const Color(0xFF2D3436); // 기본
   }
 
@@ -401,6 +402,7 @@ class _HomeScreenState extends State<HomeScreen>
     if (_selectedUniv.contains('건국')) return const Color(0xFFE8F5E9); // 건국 연초록
     if (_selectedUniv.contains('홍익')) return const Color(0xFFE3F2FD); // 홍익 연파랑
     if (_selectedUniv.contains('한양')) return const Color(0xFFE1F5FE); // 한양 연파랑 (Light Blue)
+    if (_selectedUniv.contains('서강')) return const Color(0xFFFFEBEE); // 서강 연핑크 (Light Red)
     return const Color(0xFFF1F2F6);
   }
 
