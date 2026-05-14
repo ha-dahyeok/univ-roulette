@@ -395,6 +395,7 @@ class _HomeScreenState extends State<HomeScreen>
     if (_selectedUniv.contains('서강')) return const Color(0xFFB60005); // 서강 레드 (Crimson)
     if (_selectedUniv.contains('인하')) return const Color(0xFF005BAC); // 인하 블루 (Azure)
     if (_selectedUniv.contains('중앙')) return const Color(0xFF003087); // 중앙 블루
+    if (_selectedUniv.contains('경희')) return const Color(0xFF9D2235); // 경희 레드 (Burgundy)
     return const Color(0xFF2D3436); // 기본
   }
 
@@ -407,6 +408,7 @@ class _HomeScreenState extends State<HomeScreen>
     if (_selectedUniv.contains('서강')) return const Color(0xFFFFEBEE); // 서강 연핑크 (Light Red)
     if (_selectedUniv.contains('인하')) return const Color(0xFFE3F2FD); // 인하 연파랑
     if (_selectedUniv.contains('중앙')) return const Color(0xFFE8EAF6); // 중앙 연파랑
+    if (_selectedUniv.contains('경희')) return const Color(0xFFFCE4EC); // 경희 연핑크
     return const Color(0xFFF1F2F6);
   }
 

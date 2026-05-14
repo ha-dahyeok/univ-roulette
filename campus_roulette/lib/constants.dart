@@ -41,6 +41,11 @@ const Map<String, List<String>> universityGates = {
     "중문(청룡연못)",
     "후문(중앙문화예술관)"
   ],
+  "경희대학교 서울캠퍼스": [
+    "정문",
+    "법학관 후문",
+    "의과대학 입구"
+  ],
 };
 
 const List<String> targetUniversities = [
@@ -53,4 +58,5 @@ const List<String> targetUniversities = [
   "서강대학교 서울캠퍼스",
   "인하대학교 용현캠퍼스",
   "중앙대학교 서울캠퍼스",
+  "경희대학교 서울캠퍼스",
 ];
