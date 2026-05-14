@@ -1,6 +1,5 @@
-// 3개 주요 대학교 및 해당 대학교의 출입구 목록 설정
+// 지원하는 대학교 및 해당 대학교의 출입구 목록 설정
 const Map<String, List<String>> universityGates = {
-  // 서울대학교는 제외됨
   "고려대학교 서울캠퍼스": [
     "정문",
     "법학관 입구",
@@ -49,7 +48,6 @@ const Map<String, List<String>> universityGates = {
 };
 
 const List<String> targetUniversities = [
-  // 서울대학교는 제외됨
   "건국대학교 서울캠퍼스",
   "경희대학교 서울캠퍼스",
   "고려대학교 서울캠퍼스",
