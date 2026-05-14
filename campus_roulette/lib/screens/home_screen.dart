@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_fortune_wheel/flutter_fortune_wheel.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'dart:math';
 import 'dart:async';
+import 'dart:ui';
 import '../constants.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -57,29 +59,13 @@ class _HomeScreenState extends State<HomeScreen>
 
   final supabase = Supabase.instance.client;
 
-  late final AnimationController _floatController;
-  late final Animation<Offset> _floatAnimation;
-
   @override
   void initState() {
     super.initState();
-    _floatController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
-    )..repeat(reverse: true);
-
-    _floatAnimation =
-        Tween<Offset>(
-          begin: const Offset(0, -0.05),
-          end: const Offset(0, 0.05),
-        ).animate(
-          CurvedAnimation(parent: _floatController, curve: Curves.easeInOut),
-        );
   }
 
   @override
   void dispose() {
-    _floatController.dispose();
     _fortuneController.close();
     super.dispose();
   }
@@ -198,6 +184,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _onSpinEnd() {
+    HapticFeedback.heavyImpact(); // 룰렛 멈출 때 강력한 진동 추가!
     setState(() {
       _isSpinning = false;
     });
@@ -214,7 +201,7 @@ class _HomeScreenState extends State<HomeScreen>
       barrierDismissible: false,
       builder: (context) {
         return Dialog(
-          shape: RoundedRectangleBorder(
+            shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
           ),
           elevation: 10,
@@ -359,11 +346,11 @@ class _HomeScreenState extends State<HomeScreen>
       duration: const Duration(milliseconds: 500),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: Colors.white.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: _primaryColor.withOpacity(0.08),
+            color: _primaryColor.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -384,29 +371,67 @@ class _HomeScreenState extends State<HomeScreen>
         primaryColor: _primaryColor,
       ),
       duration: const Duration(milliseconds: 500),
-      child: Scaffold(
-        backgroundColor: _lightColor,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          title: Text(
-            '🎡 캠퍼스 룰렛',
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-              color: _primaryColor,
-              fontSize: 24,
+      child: PopScope(
+        canPop: !_isSpinning,
+        child: Stack(
+        children: [
+          Scaffold(
+            backgroundColor: _lightColor,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              title: Text(
+                '대학맛집 룰렛 🎯',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color: _primaryColor,
+                  fontSize: 24,
+                ),
+              ),
+              centerTitle: true,
             ),
-          ),
-          centerTitle: true,
-        ),
-        body: Stack(
-          children: [
-            SingleChildScrollView(
+            body: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                // 1. 대학교 검색 (객관식 선택)
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 600),
+                    curve: Curves.easeInOutCubic,
+                    child: _selectedUniv.isEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.only(top: 40, bottom: 40),
+                            child: Column(
+                              children: [
+                                const Icon(
+                                  Icons.school_rounded,
+                                  size: 80,
+                                  color: Colors.black26,
+                                ),
+                                const SizedBox(height: 20),
+                                const Text(
+                                  '환영합니다!',
+                                  style: TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  '어느 대학교의 맛집을 찾으시나요?',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.black54,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+
                 _buildSectionCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -447,9 +472,13 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 const SizedBox(height: 20),
 
-                // 2. 캠퍼스 게이트 동적 필터
-                if (_selectedUniv.isNotEmpty) ...[
-                  const SizedBox(height: 20),
+
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 600),
+                  curve: Curves.easeInOutCubic,
+                  child: (_selectedUniv.isNotEmpty ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
                   _buildSectionCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -485,7 +514,7 @@ class _HomeScreenState extends State<HomeScreen>
                               showCheckmark: false,
                               selected: _isAllGatesSelected,
                               onSelected: _toggleAllGates,
-                              selectedColor: _primaryColor.withOpacity(0.8),
+                              selectedColor: _primaryColor.withValues(alpha: 0.8),
                               backgroundColor: Colors.grey.shade100,
                               elevation: _isAllGatesSelected ? 4 : 0,
                             ),
@@ -495,7 +524,7 @@ class _HomeScreenState extends State<HomeScreen>
                                 label: Text(gate, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? Colors.white : Colors.black87)),
                                 showCheckmark: false,
                                 selected: isSelected,
-                                selectedColor: _primaryColor.withOpacity(0.8),
+                                selectedColor: _primaryColor.withValues(alpha: 0.8),
                                 backgroundColor: Colors.grey.shade100,
                                 elevation: isSelected ? 4 : 0,
                                 onSelected: (bool selected) {
@@ -513,11 +542,7 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                       ],
                     ),
-                  ),
-                ],
-
-                // 3. 예산 필터
-                const SizedBox(height: 20),
+                  ),                const SizedBox(height: 20),
                 _buildSectionCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -526,7 +551,7 @@ class _HomeScreenState extends State<HomeScreen>
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Text(
-                            '💰 현재 지갑 사정은?',
+                            '💰 가격대를 선택해 주세요!',
                             style: TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: 18,
@@ -553,7 +578,7 @@ class _HomeScreenState extends State<HomeScreen>
                             showCheckmark: false,
                             selected: _isAllBudgetsSelected,
                             onSelected: _toggleAllBudgets,
-                            selectedColor: _primaryColor.withOpacity(0.8),
+                            selectedColor: _primaryColor.withValues(alpha: 0.8),
                             backgroundColor: Colors.grey.shade100,
                             elevation: _isAllBudgetsSelected ? 4 : 0,
                           ),
@@ -561,7 +586,7 @@ class _HomeScreenState extends State<HomeScreen>
                             label: Text('가성비 🪙', style: TextStyle(fontWeight: _selectedBudgets.contains(1) ? FontWeight.bold : FontWeight.normal, color: _selectedBudgets.contains(1) ? Colors.white : Colors.black87)),
                             showCheckmark: false,
                             selected: _selectedBudgets.contains(1),
-                            selectedColor: _primaryColor.withOpacity(0.8),
+                            selectedColor: _primaryColor.withValues(alpha: 0.8),
                             backgroundColor: Colors.grey.shade100,
                             elevation: _selectedBudgets.contains(1) ? 4 : 0,
                             onSelected: (s) => setState(
@@ -574,7 +599,7 @@ class _HomeScreenState extends State<HomeScreen>
                             label: Text('보통 🍽️', style: TextStyle(fontWeight: _selectedBudgets.contains(2) ? FontWeight.bold : FontWeight.normal, color: _selectedBudgets.contains(2) ? Colors.white : Colors.black87)),
                             showCheckmark: false,
                             selected: _selectedBudgets.contains(2),
-                            selectedColor: _primaryColor.withOpacity(0.8),
+                            selectedColor: _primaryColor.withValues(alpha: 0.8),
                             backgroundColor: Colors.grey.shade100,
                             elevation: _selectedBudgets.contains(2) ? 4 : 0,
                             onSelected: (s) => setState(
@@ -587,7 +612,7 @@ class _HomeScreenState extends State<HomeScreen>
                             label: Text('플렉스 🥩', style: TextStyle(fontWeight: _selectedBudgets.contains(3) ? FontWeight.bold : FontWeight.normal, color: _selectedBudgets.contains(3) ? Colors.white : Colors.black87)),
                             showCheckmark: false,
                             selected: _selectedBudgets.contains(3),
-                            selectedColor: _primaryColor.withOpacity(0.8),
+                            selectedColor: _primaryColor.withValues(alpha: 0.8),
                             backgroundColor: Colors.grey.shade100,
                             elevation: _selectedBudgets.contains(3) ? 4 : 0,
                             onSelected: (s) => setState(
@@ -603,7 +628,7 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 const SizedBox(height: 30),
 
-                // 4. 룰렛 돌리기 버튼 (Pulse Animation 적용)
+
                 const SizedBox(height: 30),
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
@@ -612,7 +637,7 @@ class _HomeScreenState extends State<HomeScreen>
                     borderRadius: BorderRadius.circular(32.5),
                     boxShadow: _isLoading || _isSpinning ? [] : [
                       BoxShadow(
-                        color: _primaryColor.withOpacity(0.4),
+                        color: _primaryColor.withValues(alpha: 0.4),
                         blurRadius: 15,
                         spreadRadius: 2,
                         offset: const Offset(0, 5),
@@ -650,61 +675,100 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ),
               ],
-            ),
+            ) : const SizedBox.shrink()),
           ),
-
+        ],
+      ),
+          ),
+          ),
           // 오버레이 팝업 룰렛 (Spin 중일 때만 표시)
           if (_isSpinning)
-            Container(
-              color: Colors.black54, // 반투명 검정 배경
-              child: Center(
-                child: SlideTransition(
-                  position: _floatAnimation,
-                  child: Container(
-                    width: 220,
-                    height: 220,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.3),
-                          blurRadius: 15,
-                          spreadRadius: 5,
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: FortuneWheel(
-                        animateFirst: false,
-                        selected: _fortuneController.stream,
-                        onAnimationEnd: _onSpinEnd,
-                        indicators: const <FortuneIndicator>[
-                          FortuneIndicator(
-                            alignment: Alignment.topCenter,
-                            child: TriangleIndicator(color: Color(0xFFFF5C5C)),
-                          ),
-                        ],
-                        items: [
-                          for (int i = 0; i < 8; i++)
-                            FortuneItem(
-                              child: const Text(
-                                '❓',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
+            BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                color: Colors.white.withValues(alpha: 0.6), // 깔끔한 화이트 반투명 배경
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _FloatingSpinner(
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 1000),
+                          curve: Curves.elasticOut, // 통통 튀며 등장
+                          builder: (context, scale, child) {
+                            return Transform.scale(
+                              scale: scale,
+                              child: child,
+                            );
+                          },
+                          child: Container(
+                            width: 120, // 로딩 스피너 크기로 대폭 축소
+                            height: 120,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _primaryColor.withValues(alpha: 0.3), // 은은한 후광
+                                  blurRadius: 30,
+                                  spreadRadius: 5,
                                 ),
-                              ),
-                              style: FortuneItemStyle(
-                                color: _getColor(i),
-                                borderColor: Colors.white,
-                                borderWidth: 2,
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(4.0),
+                              child: FortuneWheel(
+                                animateFirst: false,
+                                duration: const Duration(seconds: 4),
+                                physics: CircularPanPhysics(
+                                  duration: const Duration(seconds: 4),
+                                  curve: Curves.decelerate,
+                                ),
+                                selected: _fortuneController.stream,
+                                onAnimationEnd: _onSpinEnd,
+                                indicators: const <FortuneIndicator>[], // 바늘(Indicator) 완전 삭제
+                                items: [
+                                  for (int i = 0; i < 8; i++)
+                                    FortuneItem(
+                                      child: Icon(
+                                        [
+                                          Icons.restaurant,
+                                          Icons.local_cafe,
+                                          Icons.fastfood,
+                                          Icons.local_pizza,
+                                          Icons.ramen_dining,
+                                          Icons.icecream,
+                                          Icons.local_bar,
+                                          Icons.bakery_dining,
+                                        ][i % 8],
+                                        size: 24, // 아이콘 크기 축소
+                                        color: _primaryColor,
+                                      ),
+                                      style: FortuneItemStyle(
+                                        color: _getColor(i),
+                                        borderColor: Colors.white,
+                                        borderWidth: 1,
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
-                        ],
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 40),
+                      // 로딩 텍스트 추가
+                      DefaultTextStyle(
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: _primaryColor,
+                          letterSpacing: 1.2,
+                        ),
+                        child: const Text("대학 맛집 탐색 중..."),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -716,14 +780,47 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Color _getColor(int index) {
-    const colors = [
-      Color(0xFFFF6B6B),
-      Color(0xFFFFD166),
-      Color(0xFF06D6A0),
-      Color(0xFF118AB2),
-      Color(0xFFEF476F),
-      Color(0xFFF78C6B),
-    ];
-    return colors[index % colors.length];
+    // 솔리드 모놀리스: 모든 조각을 똑같은 새하얀 색으로 통일하여 매끄러운 단일 원판으로 만듦
+    return Colors.white;
+  }
+}
+
+class _FloatingSpinner extends StatefulWidget {
+  final Widget child;
+  const _FloatingSpinner({required this.child});
+
+  @override
+  State<_FloatingSpinner> createState() => _FloatingSpinnerState();
+}
+
+class _FloatingSpinnerState extends State<_FloatingSpinner> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat(reverse: true);
+    _animation = Tween<double>(begin: -15, end: 15).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOutSine));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _animation.value),
+          child: child,
+        );
+      },
+      child: widget.child,
+    );
   }
 }
