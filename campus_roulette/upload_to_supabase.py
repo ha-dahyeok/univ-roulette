@@ -46,7 +46,8 @@ def main():
         'c:/Ha_dahyeok/2026_NEXT_CONTEST/hongik_restaurants.csv',
         'c:/Ha_dahyeok/2026_NEXT_CONTEST/hanyang_restaurants.csv',
         'c:/Ha_dahyeok/2026_NEXT_CONTEST/sogang_restaurants.csv',
-        'c:/Ha_dahyeok/2026_NEXT_CONTEST/inha_restaurants.csv'
+        'c:/Ha_dahyeok/2026_NEXT_CONTEST/inha_restaurants.csv',
+        'c:/Ha_dahyeok/2026_NEXT_CONTEST/cau_restaurants.csv'
     ]
     
     payload = []
