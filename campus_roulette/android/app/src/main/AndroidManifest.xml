@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 인터넷 권한 추가 (Release 빌드 시 필수) -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    
     <application
         android:label="대학맛집 룰렛"
         android:name="${applicationName}"
