@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_fortune_wheel/flutter_fortune_wheel.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'dart:math';
@@ -25,7 +24,7 @@ class _HomeScreenState extends State<HomeScreen>
   List<Map<String, dynamic>> _restaurants = [];
   bool _isLoading = false;
 
-  StreamController<int> _fortuneController = StreamController<int>();
+
   int _resultIndex = -1;
   bool _isSpinning = false;
   bool _isSnackBarShowing = false;
@@ -64,11 +63,7 @@ class _HomeScreenState extends State<HomeScreen>
     super.initState();
   }
 
-  @override
-  void dispose() {
-    _fortuneController.close();
-    super.dispose();
-  }
+
 
   void _showErrorSnackBar(String message) async {
     if (_isSnackBarShowing) return;
@@ -163,12 +158,12 @@ class _HomeScreenState extends State<HomeScreen>
       setState(() {
         _isLoading = false;
         _isSpinning = true;
-        _fortuneController = StreamController<int>(); // 매번 새로운 스트림 생성하여 구독 에러 방지
       });
 
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (!_fortuneController.isClosed) {
-          _fortuneController.add(Random().nextInt(8)); // 8칸 룰렛 중 아무데나 멈추기
+      // 4초 후 결과 팝업 표시
+      Future.delayed(const Duration(seconds: 4), () {
+        if (mounted && _isSpinning) {
+          _onSpinEnd();
         }
       });
     } catch (e) {
@@ -718,41 +713,7 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                             child: Padding(
                               padding: const EdgeInsets.all(4.0),
-                              child: FortuneWheel(
-                                animateFirst: false,
-                                duration: const Duration(seconds: 4),
-                                physics: CircularPanPhysics(
-                                  duration: const Duration(seconds: 4),
-                                  curve: Curves.decelerate,
-                                ),
-                                selected: _fortuneController.stream,
-                                onAnimationEnd: _onSpinEnd,
-                                indicators: const <FortuneIndicator>[], // 바늘(Indicator) 완전 삭제
-                                items: [
-                                  for (int i = 0; i < 8; i++)
-                                    FortuneItem(
-                                      child: Icon(
-                                        [
-                                          Icons.restaurant,
-                                          Icons.local_cafe,
-                                          Icons.fastfood,
-                                          Icons.local_pizza,
-                                          Icons.ramen_dining,
-                                          Icons.icecream,
-                                          Icons.local_bar,
-                                          Icons.bakery_dining,
-                                        ][i % 8],
-                                        size: 24, // 아이콘 크기 축소
-                                        color: _primaryColor,
-                                      ),
-                                      style: FortuneItemStyle(
-                                        color: _getColor(i),
-                                        borderColor: Colors.white,
-                                        borderWidth: 1,
-                                      ),
-                                    ),
-                                ],
-                              ),
+                              child: _StepRotationSpinner(primaryColor: _primaryColor),
                             ),
                           ),
                         ),
@@ -777,11 +738,6 @@ class _HomeScreenState extends State<HomeScreen>
       ),
       ),
     );
-  }
-
-  Color _getColor(int index) {
-    // 솔리드 모놀리스: 모든 조각을 똑같은 새하얀 색으로 통일하여 매끄러운 단일 원판으로 만듦
-    return Colors.white;
   }
 }
 
@@ -821,6 +777,77 @@ class _FloatingSpinnerState extends State<_FloatingSpinner> with SingleTickerPro
         );
       },
       child: widget.child,
+    );
+  }
+}
+
+class _StepRotationSpinner extends StatefulWidget {
+  final Color primaryColor;
+  const _StepRotationSpinner({required this.primaryColor});
+
+  @override
+  State<_StepRotationSpinner> createState() => _StepRotationSpinnerState();
+}
+
+class _StepRotationSpinnerState extends State<_StepRotationSpinner> {
+  int _currentIndex = 0;
+  late Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    // 0.6초마다 한 칸씩(60도) 부드럽게 튕기듯 이동
+    _timer = Timer.periodic(const Duration(milliseconds: 800), (timer) {
+      if (mounted) {
+        setState(() {
+          _currentIndex++;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedRotation(
+      turns: _currentIndex / 6.0,
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeInOutCubic, // 부드럽고 우아하게 미끄러지듯 이동
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          for (int i = 0; i < 6; i++)
+            Transform.translate(
+              offset: Offset(
+                35 * cos(i * 2 * pi / 6 - pi / 2),
+                35 * sin(i * 2 * pi / 6 - pi / 2),
+              ),
+              child: AnimatedRotation(
+                // 부모가 회전할 때 자식을 역회전시켜 아이콘이 항상 정면을 보게 유지 (관람차 효과)
+                turns: -_currentIndex / 6.0,
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.easeInOutCubic,
+                child: Icon(
+                  [
+                    Icons.restaurant,
+                    Icons.local_cafe,
+                    Icons.fastfood,
+                    Icons.local_pizza,
+                    Icons.ramen_dining,
+                    Icons.icecream,
+                  ][i],
+                  size: 24,
+                  color: widget.primaryColor,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
