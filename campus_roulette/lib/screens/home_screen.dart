@@ -389,12 +389,14 @@ class _HomeScreenState extends State<HomeScreen>
   Color get _primaryColor {
     if (_selectedUniv.contains('연세')) return const Color(0xFF1428A0); // 연세 블루
     if (_selectedUniv.contains('고려')) return const Color(0xFF8A1538); // 크림슨
+    if (_selectedUniv.contains('건국')) return const Color(0xFF006633); // 건국 그린
     return const Color(0xFF2D3436); // 기본
   }
 
   Color get _lightColor {
     if (_selectedUniv.contains('연세')) return const Color(0xFFE8EAF6);
     if (_selectedUniv.contains('고려')) return const Color(0xFFFCE4EC);
+    if (_selectedUniv.contains('건국')) return const Color(0xFFE8F5E9); // 건국 연초록
     return const Color(0xFFF1F2F6);
   }
 
