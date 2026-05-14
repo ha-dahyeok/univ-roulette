@@ -28,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen>
   int _resultIndex = -1;
   bool _isSpinning = false;
   bool _isSnackBarShowing = false;
+  DateTime? currentBackPressTime;
 
   bool get _isAllGatesSelected {
     final allGates = universityGates[_selectedUniv] ?? [];
@@ -367,7 +368,25 @@ class _HomeScreenState extends State<HomeScreen>
       ),
       duration: const Duration(milliseconds: 500),
       child: PopScope(
-        canPop: !_isSpinning,
+        canPop: false,
+        onPopInvoked: (didPop) {
+          if (didPop) return;
+          if (_isSpinning) return;
+
+          DateTime now = DateTime.now();
+          if (currentBackPressTime == null || 
+              now.difference(currentBackPressTime!) > const Duration(seconds: 2)) {
+            currentBackPressTime = now;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('한 번 더 누르시면 앱이 종료됩니다.'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+            return;
+          }
+          SystemNavigator.pop();
+        },
         child: Stack(
         children: [
           Scaffold(
@@ -469,6 +488,7 @@ class _HomeScreenState extends State<HomeScreen>
 
 
                 AnimatedSize(
+                  alignment: Alignment.topCenter,
                   duration: const Duration(milliseconds: 600),
                   curve: Curves.easeInOutCubic,
                   child: (_selectedUniv.isNotEmpty ? Column(
