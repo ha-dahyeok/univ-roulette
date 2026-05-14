@@ -634,10 +634,12 @@ class _HomeScreenState extends State<HomeScreen>
                           thickness: 4,
                           child: SingleChildScrollView(
                             controller: _univScrollController,
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 12.0), // Scrollbar padding
-                              child: Wrap(
-                                spacing: 10,
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 12.0), // Scrollbar padding
+                                child: Wrap(
+                                  spacing: 10,
                                 runSpacing: 10,
                                 children: targetUniversities.map((univ) {
                                   final isSelected = _selectedUniv == univ;
@@ -656,15 +658,16 @@ class _HomeScreenState extends State<HomeScreen>
                                     },
                                   );
                                 }).toList(),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
+                              ), // Wrap
+                            ), // Padding
+                          ), // SizedBox
+                        ), // SingleChildScrollView
+                      ), // RawScrollbar
+                    ), // ConstrainedBox
+                  ],
+                ), // Column
+              ), // _buildSectionCard
+              const SizedBox(height: 20),
 
 
                 AnimatedSize(
