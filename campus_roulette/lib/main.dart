@@ -19,7 +19,7 @@ class CampusRouletteApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '캠퍼스 룰렛',
+      title: '대학맛집 룰렛',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.grey, // 기본 색상은 중립적인 회색
