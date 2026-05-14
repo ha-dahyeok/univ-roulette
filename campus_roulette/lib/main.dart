@@ -22,11 +22,10 @@ class CampusRouletteApp extends StatelessWidget {
       title: '캠퍼스 룰렛',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFFEE500),
-          primary: const Color(0xFFFEE500),
-          secondary: const Color(0xFFFF5C5C),
+          seedColor: Colors.grey, // 기본 색상은 중립적인 회색
+          primary: Colors.black87,
         ),
-        scaffoldBackgroundColor: Colors.white,
+        scaffoldBackgroundColor: const Color(0xFFF8F9FA), // 연한 회색 배경
         useMaterial3: true,
         fontFamily: 'Pretendard',
       ),
