@@ -615,26 +615,42 @@ class _HomeScreenState extends State<HomeScreen>
                         style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: _primaryColor),
                       ),
                       const SizedBox(height: 15),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: targetUniversities.map((univ) {
-                          final isSelected = _selectedUniv == univ;
-                          return _buildCustomChip(
-                            label: univ,
-                            isSelected: isSelected,
-                            onTap: () {
-                              setState(() {
-                                if (isSelected) {
-                                  _selectedUniv = '';
-                                } else {
-                                  _selectedUniv = univ;
-                                }
-                                _selectedGates.clear(); // 대학이 바뀌면 선택된 게이트 초기화
-                              });
-                            },
-                          );
-                        }).toList(),
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(context).size.height * 0.35,
+                        ),
+                        child: RawScrollbar(
+                          thumbVisibility: true,
+                          thumbColor: _primaryColor.withValues(alpha: 0.3),
+                          radius: const Radius.circular(20),
+                          thickness: 4,
+                          child: SingleChildScrollView(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 12.0), // Scrollbar padding
+                              child: Wrap(
+                                spacing: 10,
+                                runSpacing: 10,
+                                children: targetUniversities.map((univ) {
+                                  final isSelected = _selectedUniv == univ;
+                                  return _buildCustomChip(
+                                    label: univ,
+                                    isSelected: isSelected,
+                                    onTap: () {
+                                      setState(() {
+                                        if (isSelected) {
+                                          _selectedUniv = '';
+                                        } else {
+                                          _selectedUniv = univ;
+                                        }
+                                        _selectedGates.clear(); // 대학이 바뀌면 선택된 게이트 초기화
+                                      });
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
