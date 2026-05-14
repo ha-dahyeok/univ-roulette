@@ -42,7 +42,8 @@ def main():
     csv_files = [
         'c:/Ha_dahyeok/2026_NEXT_CONTEST/korea_univ_restaurants.csv',
         'c:/Ha_dahyeok/2026_NEXT_CONTEST/yonsei_restaurants.csv',
-        'c:/Ha_dahyeok/2026_NEXT_CONTEST/konkuk_restaurants.csv'
+        'c:/Ha_dahyeok/2026_NEXT_CONTEST/konkuk_restaurants.csv',
+        'c:/Ha_dahyeok/2026_NEXT_CONTEST/hongik_restaurants.csv'
     ]
     
     payload = []
