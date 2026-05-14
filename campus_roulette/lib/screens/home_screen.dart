@@ -6,6 +6,10 @@ import 'package:share_plus/share_plus.dart';
 import 'dart:math';
 import 'dart:async';
 import 'dart:ui';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
+import 'package:screenshot/screenshot.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import '../constants.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -17,6 +21,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
+  final ScreenshotController _screenshotController = ScreenshotController();
   String _selectedUniv = ''; // 기본값: 선택 안 됨
   final Set<int> _selectedBudgets = {};
   final Set<String> _selectedGates = {};
@@ -28,6 +33,7 @@ class _HomeScreenState extends State<HomeScreen>
   int _resultIndex = -1;
   bool _isSpinning = false;
   bool _isSnackBarShowing = false;
+  bool _showResultPopup = false;
   DateTime? currentBackPressTime;
 
   bool get _isAllGatesSelected {
@@ -183,75 +189,86 @@ class _HomeScreenState extends State<HomeScreen>
     HapticFeedback.heavyImpact(); // 룰렛 멈출 때 강력한 진동 추가!
     setState(() {
       _isSpinning = false;
+      if (_resultIndex != -1) {
+        _showResultPopup = true;
+      }
     });
-    _showResultDialog();
   }
 
-  void _showResultDialog() {
-    if (_resultIndex == -1) return;
+  Widget _buildResultPopupOverlay() {
+    if (_resultIndex == -1) return const SizedBox.shrink();
     final winner = _restaurants[_resultIndex];
     final category = winner['category'] ?? '음식점';
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return Dialog(
-            shape: RoundedRectangleBorder(
+    return Container(
+      color: Colors.black54,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(24.0),
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
             borderRadius: BorderRadius.circular(28),
           ),
-          elevation: 10,
-          backgroundColor: Colors.white,
           child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    '🎉 오늘의 추천 맛집! 🎉',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.black87,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 20),
                   Container(
-                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8F9FA),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    width: double.infinity,
-                    child: Column(
-                      children: [
-                        Text(
-                          winner['name'] ?? '이름 없음',
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.black,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            category,
-                            style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            '🎉 오늘의 추천 맛집! 🎉',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.black87,
+                            ),
                             textAlign: TextAlign.center,
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 20),
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8F9FA),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            width: double.infinity,
+                            child: Column(
+                              children: [
+                                Text(
+                                  winner['name'] ?? '이름 없음',
+                                  style: const TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.black,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade200,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    category,
+                                    style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.bold),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 24),
                   ElevatedButton.icon(
                     onPressed: () async {
@@ -281,22 +298,64 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                   const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      // ignore: deprecated_member_use
-                      Share.share(
-                        '오늘 점심은 여기로 결정됨! 🎯\n${winner['name']} ($category)\n위치: ${winner['url']}',
-                      );
-                    },
-                    icon: const Icon(Icons.share, color: Colors.black87),
-                    label: const Text('결과 공유하기', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 55),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            try {
+                              // 화면 렌더링 후 캡처
+                              await Future.delayed(const Duration(milliseconds: 100));
+                              final imageBytes = await _screenshotController.capture(delay: const Duration(milliseconds: 50));
+                              if (imageBytes != null) {
+                                if (kIsWeb) {
+                                  final xFile = XFile.fromData(imageBytes, mimeType: 'image/png', name: 'result_card.png');
+                                  await Share.shareXFiles([xFile]);
+                                } else {
+                                  final directory = await getApplicationDocumentsDirectory();
+                                  final imagePath = await File('${directory.path}/result_card.png').create();
+                                  await imagePath.writeAsBytes(imageBytes);
+                                  await Share.shareXFiles([XFile(imagePath.path)]);
+                                }
+                              }
+                            } catch (e) {
+                              debugPrint('공유 실패: $e');
+                            }
+                          },
+                          icon: const Icon(Icons.image, color: Colors.black87, size: 20),
+                          label: const Text('결과 이미지 공유', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 13)),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            side: BorderSide(color: Colors.grey.shade300, width: 2),
+                          ),
+                        ),
                       ),
-                      side: BorderSide(color: Colors.grey.shade300, width: 2),
-                    ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            try {
+                              final textMessage = '오늘 한 끼는 여기로 결정됨! 🎯\n${winner['name']} ($category)\n📍위치: ${winner['url']}\n\n나도 대학맛집 룰렛 돌려보기 👇\nhttps://ha-dahyeok.github.io/univ-roulette/';
+                              await Share.share(textMessage);
+                            } catch (e) {
+                              debugPrint('공유 실패: $e');
+                            }
+                          },
+                          icon: const Icon(Icons.text_snippet, color: Colors.black87, size: 20),
+                          label: const Text('식당 정보 공유', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 13)),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            side: BorderSide(color: Colors.grey.shade300, width: 2),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 20),
                   Row(
@@ -304,13 +363,15 @@ class _HomeScreenState extends State<HomeScreen>
                     children: [
                       TextButton(
                         onPressed: () {
-                          Navigator.of(context).pop();
+                          setState(() { _showResultPopup = false; });
                           _spinBlindRoulette(); // 다시 돌리기
                         },
                         child: const Text('🔄 다시 돌리기', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
                       TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
+                        onPressed: () {
+                          setState(() { _showResultPopup = false; });
+                        },
                         child: const Text('닫기', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
                     ],
@@ -319,8 +380,8 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -335,6 +396,44 @@ class _HomeScreenState extends State<HomeScreen>
     if (_selectedUniv.contains('연세')) return const Color(0xFFE8EAF6);
     if (_selectedUniv.contains('고려')) return const Color(0xFFFCE4EC);
     return const Color(0xFFF1F2F6);
+  }
+
+  Widget _buildCustomChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+    Color? selectedColor,
+  }) {
+    final activeColor = selectedColor ?? _primaryColor;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isSelected ? Colors.transparent : Colors.grey.shade300, width: 1.5),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: activeColor.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              : [],
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? Colors.white : Colors.black87,
+            height: 1.2,
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildSectionCard({required Widget child}) {
@@ -387,9 +486,11 @@ class _HomeScreenState extends State<HomeScreen>
           }
           SystemNavigator.pop();
         },
-        child: Stack(
-        children: [
-          Scaffold(
+        child: Screenshot(
+          controller: _screenshotController,
+          child: Stack(
+            children: [
+              Scaffold(
             backgroundColor: _lightColor,
             appBar: AppBar(
               backgroundColor: Colors.transparent,
@@ -404,11 +505,56 @@ class _HomeScreenState extends State<HomeScreen>
               ),
               centerTitle: true,
             ),
-            body: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+            body: SafeArea(
+              bottom: true,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                if (kIsWeb && defaultTargetPlatform == TargetPlatform.android)
+                  Container(
+                    color: Colors.transparent,
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                    child: SafeArea(
+                      bottom: false,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '앱에서 더 빠르고 쾌적하게 즐겨보세요!',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: _primaryColor),
+                            ),
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              final url = Uri.parse('https://ha-dahyeok.github.io/univ-roulette/app-release.apk');
+                              try {
+                                await launchUrl(url, mode: LaunchMode.externalApplication);
+                              } catch (e) {
+                                debugPrint('Could not launch $url');
+                              }
+                            },
+                            icon: const Icon(Icons.android_rounded, size: 16),
+                            label: const Text('앱 다운로드', style: TextStyle(fontWeight: FontWeight.w800)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _primaryColor,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                              minimumSize: const Size(0, 36),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
                   AnimatedSize(
                     duration: const Duration(milliseconds: 600),
                     curve: Curves.easeInOutCubic,
@@ -460,20 +606,15 @@ class _HomeScreenState extends State<HomeScreen>
                         runSpacing: 10,
                         children: targetUniversities.map((univ) {
                           final isSelected = _selectedUniv == univ;
-                          return ChoiceChip(
-                            label: Text(univ, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? Colors.white : Colors.black87)),
-                            showCheckmark: false,
-                            selected: isSelected,
-                            selectedColor: _primaryColor,
-                            backgroundColor: Colors.grey.shade100,
-                            elevation: isSelected ? 4 : 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                            onSelected: (selected) {
+                          return _buildCustomChip(
+                            label: univ,
+                            isSelected: isSelected,
+                            onTap: () {
                               setState(() {
-                                if (selected) {
-                                  _selectedUniv = univ;
-                                } else {
+                                if (isSelected) {
                                   _selectedUniv = '';
+                                } else {
+                                  _selectedUniv = univ;
                                 }
                                 _selectedGates.clear(); // 대학이 바뀌면 선택된 게이트 초기화
                               });
@@ -521,33 +662,26 @@ class _HomeScreenState extends State<HomeScreen>
                           spacing: 10,
                           runSpacing: 10,
                           children: [
-                            FilterChip(
-                              label: Text(
-                                '전체 입구',
-                                style: TextStyle(fontWeight: _isAllGatesSelected ? FontWeight.bold : FontWeight.normal, color: _isAllGatesSelected ? Colors.white : Colors.black87),
-                              ),
-                              showCheckmark: false,
-                              selected: _isAllGatesSelected,
-                              onSelected: _toggleAllGates,
+                            _buildCustomChip(
+                              label: '전체 입구',
+                              isSelected: _isAllGatesSelected,
                               selectedColor: _primaryColor.withValues(alpha: 0.8),
-                              backgroundColor: Colors.grey.shade100,
-                              elevation: _isAllGatesSelected ? 4 : 0,
+                              onTap: () {
+                                _toggleAllGates(!_isAllGatesSelected);
+                              },
                             ),
                             ...(universityGates[_selectedUniv] ?? []).map((gate) {
                               final isSelected = _selectedGates.contains(gate);
-                              return FilterChip(
-                                label: Text(gate, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? Colors.white : Colors.black87)),
-                                showCheckmark: false,
-                                selected: isSelected,
+                              return _buildCustomChip(
+                                label: gate,
+                                isSelected: isSelected,
                                 selectedColor: _primaryColor.withValues(alpha: 0.8),
-                                backgroundColor: Colors.grey.shade100,
-                                elevation: isSelected ? 4 : 0,
-                                onSelected: (bool selected) {
+                                onTap: () {
                                   setState(() {
-                                    if (selected) {
-                                      _selectedGates.add(gate);
-                                    } else {
+                                    if (isSelected) {
                                       _selectedGates.remove(gate);
+                                    } else {
+                                      _selectedGates.add(gate);
                                     }
                                   });
                                 },
@@ -585,55 +719,42 @@ class _HomeScreenState extends State<HomeScreen>
                         spacing: 10,
                         runSpacing: 10,
                         children: [
-                          FilterChip(
-                            label: Text(
-                              '전체 가격대',
-                              style: TextStyle(fontWeight: _isAllBudgetsSelected ? FontWeight.bold : FontWeight.normal, color: _isAllBudgetsSelected ? Colors.white : Colors.black87),
-                            ),
-                            showCheckmark: false,
-                            selected: _isAllBudgetsSelected,
-                            onSelected: _toggleAllBudgets,
+                          _buildCustomChip(
+                            label: '전체 가격대',
+                            isSelected: _isAllBudgetsSelected,
                             selectedColor: _primaryColor.withValues(alpha: 0.8),
-                            backgroundColor: Colors.grey.shade100,
-                            elevation: _isAllBudgetsSelected ? 4 : 0,
+                            onTap: () {
+                              _toggleAllBudgets(!_isAllBudgetsSelected);
+                            },
                           ),
-                          FilterChip(
-                            label: Text('가성비 🪙', style: TextStyle(fontWeight: _selectedBudgets.contains(1) ? FontWeight.bold : FontWeight.normal, color: _selectedBudgets.contains(1) ? Colors.white : Colors.black87)),
-                            showCheckmark: false,
-                            selected: _selectedBudgets.contains(1),
+                          _buildCustomChip(
+                            label: '가성비 🪙',
+                            isSelected: _selectedBudgets.contains(1),
                             selectedColor: _primaryColor.withValues(alpha: 0.8),
-                            backgroundColor: Colors.grey.shade100,
-                            elevation: _selectedBudgets.contains(1) ? 4 : 0,
-                            onSelected: (s) => setState(
-                              () => s
-                                  ? _selectedBudgets.add(1)
-                                  : _selectedBudgets.remove(1),
+                            onTap: () => setState(
+                              () => _selectedBudgets.contains(1)
+                                  ? _selectedBudgets.remove(1)
+                                  : _selectedBudgets.add(1),
                             ),
                           ),
-                          FilterChip(
-                            label: Text('보통 🍽️', style: TextStyle(fontWeight: _selectedBudgets.contains(2) ? FontWeight.bold : FontWeight.normal, color: _selectedBudgets.contains(2) ? Colors.white : Colors.black87)),
-                            showCheckmark: false,
-                            selected: _selectedBudgets.contains(2),
+                          _buildCustomChip(
+                            label: '보통 🍽️',
+                            isSelected: _selectedBudgets.contains(2),
                             selectedColor: _primaryColor.withValues(alpha: 0.8),
-                            backgroundColor: Colors.grey.shade100,
-                            elevation: _selectedBudgets.contains(2) ? 4 : 0,
-                            onSelected: (s) => setState(
-                              () => s
-                                  ? _selectedBudgets.add(2)
-                                  : _selectedBudgets.remove(2),
+                            onTap: () => setState(
+                              () => _selectedBudgets.contains(2)
+                                  ? _selectedBudgets.remove(2)
+                                  : _selectedBudgets.add(2),
                             ),
                           ),
-                          FilterChip(
-                            label: Text('플렉스 🥩', style: TextStyle(fontWeight: _selectedBudgets.contains(3) ? FontWeight.bold : FontWeight.normal, color: _selectedBudgets.contains(3) ? Colors.white : Colors.black87)),
-                            showCheckmark: false,
-                            selected: _selectedBudgets.contains(3),
+                          _buildCustomChip(
+                            label: '플렉스 🥩',
+                            isSelected: _selectedBudgets.contains(3),
                             selectedColor: _primaryColor.withValues(alpha: 0.8),
-                            backgroundColor: Colors.grey.shade100,
-                            elevation: _selectedBudgets.contains(3) ? 4 : 0,
-                            onSelected: (s) => setState(
-                              () => s
-                                  ? _selectedBudgets.add(3)
-                                  : _selectedBudgets.remove(3),
+                            onTap: () => setState(
+                              () => _selectedBudgets.contains(3)
+                                  ? _selectedBudgets.remove(3)
+                                  : _selectedBudgets.add(3),
                             ),
                           ),
                         ],
@@ -694,8 +815,14 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ],
       ),
+                  ),
+                ),
+              ],
+            ),
           ),
           ),
+          // 오버레이 결과 팝업
+          if (_showResultPopup) _buildResultPopupOverlay(),
           // 오버레이 팝업 룰렛 (Spin 중일 때만 표시)
           if (_isSpinning)
             BackdropFilter(
@@ -756,6 +883,7 @@ class _HomeScreenState extends State<HomeScreen>
             ),
         ],
       ),
+        ),
       ),
     );
   }
