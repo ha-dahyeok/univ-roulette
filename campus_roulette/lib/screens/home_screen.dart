@@ -22,6 +22,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   final ScreenshotController _screenshotController = ScreenshotController();
+  final ScrollController _univScrollController = ScrollController();
   String _selectedUniv = ''; // 기본값: 선택 안 됨
   final Set<int> _selectedBudgets = {};
   final Set<String> _selectedGates = {};
@@ -68,6 +69,12 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    _univScrollController.dispose();
+    super.dispose();
   }
 
 
@@ -620,11 +627,13 @@ class _HomeScreenState extends State<HomeScreen>
                           maxHeight: MediaQuery.of(context).size.height * 0.35,
                         ),
                         child: RawScrollbar(
+                          controller: _univScrollController,
                           thumbVisibility: true,
                           thumbColor: _primaryColor.withValues(alpha: 0.3),
                           radius: const Radius.circular(20),
                           thickness: 4,
                           child: SingleChildScrollView(
+                            controller: _univScrollController,
                             child: Padding(
                               padding: const EdgeInsets.only(right: 12.0), // Scrollbar padding
                               child: Wrap(
